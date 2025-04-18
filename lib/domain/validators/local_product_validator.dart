@@ -1,0 +1,50 @@
+import 'package:food_manager/domain/models/product/local_product.dart';
+import '../../core/exceptions/exceptions.dart';
+
+class ProductValidator{
+  static bool _isValidDouble(double value, [bool canBeZero = false]) {
+      return value.isFinite && !value.isNaN && !value.isNegative &&
+          (canBeZero || value > 0);
+  }
+
+  static void validate(LocalProduct product) {
+    if (product.name.trim().isEmpty) throw ValidationError("Invalid name.");
+    if (product.referenceUnit.trim().isEmpty) {
+      throw ValidationError("Invalid reference unit.");
+    }
+    if (product.barcode == null || product.barcode!.trim().isEmpty) {
+      throw ValidationError("Invalid barcode.");
+    }
+    if (product.containerSize == null ||
+        !_isValidDouble(product.containerSize!)) {
+      throw ValidationError("Invalid container size.");
+    }
+    if (!_isValidDouble(product.referenceValue)) {
+      throw ValidationError("Invalid reference value.");
+    }
+    if (!_isValidDouble(product.calories)) {
+      throw ValidationError("Invalid calories.");
+    }
+    if (!_isValidDouble(product.carbs)) throw ValidationError("Invalid carbs.");
+    if (!_isValidDouble(product.protein)) {
+      throw ValidationError("Invalid protein.");
+    }
+    if (!_isValidDouble(product.fat)) throw ValidationError("Invalid fat.");
+    product.units.forEach((key, value) {
+      if (key.trim().isEmpty) throw ValidationError("Invalid barcode.");
+      if (!_isValidDouble(value)) {
+        throw ValidationError("Invalid reference value.");
+      }
+
+    });
+  }
+
+  static bool isValid(LocalProduct product) {
+    try {
+      validate(product);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+}

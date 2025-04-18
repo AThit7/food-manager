@@ -1,0 +1,1 @@
+import '../services/product_info_service.dart';
