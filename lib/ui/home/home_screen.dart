@@ -24,7 +24,7 @@ class HomeScreen extends StatelessWidget {
                   MaterialPageRoute(
                       builder: (context) {
                         final viewModel = ScannerViewModel(
-                            databaseService: context.read(),
+                            localProductRepository: context.read(),
                             scannerService: context.read()
                         );
                         return ScannerScreen(viewModel: viewModel);
@@ -42,7 +42,7 @@ class HomeScreen extends StatelessWidget {
                   MaterialPageRoute(
                       builder: (context) {
                         final viewModel = AllProductsViewmodel(
-                            databaseService: context.read()
+                            localProductRepository: context.read()
                         );
                         return AllProductsScreen(viewModel: viewModel);
                       }

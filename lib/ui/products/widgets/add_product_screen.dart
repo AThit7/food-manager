@@ -48,7 +48,7 @@ class AddProductScreen extends StatelessWidget {
                                     product: null,
                                     barcode: snapshot.data!.barcode,
                                     viewModel: ProductFormViewmodel(
-                                      databaseService: context.read(),
+                                      localProductRepository: context.read(),
                                     ),
                                   )
                               ),
@@ -66,7 +66,7 @@ class AddProductScreen extends StatelessWidget {
                   product: snapshot.data!.product,
                   barcode: snapshot.data!.barcode,
                   viewModel: ProductFormViewmodel(
-                    databaseService: context.read(),
+                    localProductRepository: context.read(),
                   ),
                 );
               }

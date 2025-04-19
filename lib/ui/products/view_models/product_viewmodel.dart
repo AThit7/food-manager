@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 
-import '../../../data/services/database/database_service.dart';
 import '../../../domain/models/product/local_product.dart';
+import '../models/product_form_model.dart';
 
 class ProductViewmodel extends ChangeNotifier {
+  final LocalProduct _product;
+  String get productName => _product.name;
+
   ProductViewmodel({
     required LocalProduct product
   }) : _product = product;
 
-  final LocalProduct _product;
-  String get productName => _product.name;
-//final DatabaseService _databaseService;
+  Future<ProductFormModel> fetchProductForm(String barcode) {
+    // TODO: plan use cases, should db check be tightly couples with api fetch?
+
+  }
 }

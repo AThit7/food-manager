@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 
-import '../../../data/services/database/database_service.dart';
+import '../../../data/repositories/local_product_repository.dart';
 import '../../../domain/models/product/local_product.dart';
 
 class AllProductsViewmodel extends ChangeNotifier {
   AllProductsViewmodel ({
-    required DatabaseService databaseService,
-  }) : _databaseService = databaseService;
+    required LocalProductRepository localProductRepository,
+  }) : _localProductRepository = localProductRepository;
 
-  final DatabaseService _databaseService;
+  final LocalProductRepository _localProductRepository;
 
   Future<List<LocalProduct>> getProducts() async {
-    return await _databaseService.listProducts();
+    return await _localProductRepository.listProducts();
   }
 }

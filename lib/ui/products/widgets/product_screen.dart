@@ -27,7 +27,7 @@ class ProductScreen extends StatelessWidget {
                   MaterialPageRoute(
                     builder: (_) => ProductFormScreen(
                       viewModel: ProductFormViewmodel(
-                        databaseService: context.read(),
+                        localProductRepository: context.read(),
                       ),
                     ),
                   ),

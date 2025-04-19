@@ -1,14 +1,16 @@
-import '../../../data/services/database/database_service.dart';
+import '../../../data/repositories/local_product_repository.dart';
 import '../../../domain/models/product/local_product.dart';
+import '../models/product_form_model.dart';
 
 class ProductFormViewmodel {
   const ProductFormViewmodel({
-    required DatabaseService databaseService,
-  }) : _databaseService = databaseService;
+    required LocalProductRepository localProductRepository,
+  }) : _localProductRepository = localProductRepository;
 
-  final DatabaseService _databaseService;
+  final LocalProductRepository _localProductRepository;
 
-  Future<void> addProduct(LocalProduct product) async {
-    await _databaseService.insertProduct(product);
+  Future<void> addProduct(ProductFormModel form) async {
+    // TODO: form to LocalProduct
+    await _localProductRepository.insertProduct(product);
   }
 }

@@ -121,7 +121,6 @@ class _ScannerScreenStateBkp extends State<ScannerScreen> {
                               final viewModel = AddProductViewmodel(
                                   productBarcode :
                                   capture.barcodes.first.displayValue,
-                                databaseService: context.read(),
                               );
                               return AddProductScreen(viewModel: viewModel);
                             }

@@ -4,16 +4,15 @@ import 'package:openfoodfacts/openfoodfacts.dart';
 
 import '../view_models/product_form_viewmodel.dart';
 import '../../../domain/models/product/local_product.dart';
+import '../models/product_form_model.dart';
 
 class _Unit {
-  String? name;
-  double? value; // in base units
   final nameFieldKey = GlobalKey<FormFieldState>();
   final valueFieldKey = GlobalKey<FormFieldState>();
   final nameController = TextEditingController();
   final valueController = TextEditingController();
 
-  _Unit({this.name, this.value});
+  _Unit();
 
   void dispose() {
     nameController.dispose();
@@ -40,38 +39,34 @@ class ProductFormScreen extends StatefulWidget {
 }
 
 class _AddProductFormState extends State<ProductFormScreen > {
+  // TODO: move from LocalProduct to LocalProductForm
   final _formKey = GlobalKey<FormState>();
-  LocalProduct product = LocalProduct(
-    name: "",
-    units: {},
-    referenceUnit: 'g',
-    referenceValue: 100,
-  );
-  double? referenceValue = 100;
+  late ProductFormModel product; // TODO: is late ok?
   final List<_Unit> units = [_Unit()];
   bool hasContainer = true;
+  //double? referenceValue = 100; remove?
 
-  bool _isValidAmount(double? value) =>
-      value != null && value.isFinite && value > 0;
+  bool _isValidAmountRaw(double? value, [bool canBeZero = false]) =>
+      value != null && value.isFinite && !value.isNegative &&
+          (canBeZero || value > 0);
 
-  bool _isValidAmountOrZero(double? value) =>
-      value != null && value.isFinite && value >= 0;
+  bool _isValidAmount(String? amount, [bool canBeZero = false]) {
+    final value = double.tryParse(amount ?? "");
+    return _isValidAmountRaw(value, canBeZero);
+  }
 
-  FormFieldValidator<String?> _doubleFieldValidator(
-      {required double? doubleValue, bool canBeZero = true}) =>
+  FormFieldValidator<String?> _doubleFieldValidator([bool canBeZero = false]) =>
           (String? value) {
         if (value == null || value.isEmpty) {
           return 'Enter some value';
-        } else if (canBeZero && !_isValidAmountOrZero(doubleValue)) {
-          return 'Invalid value';
-        } else if (!canBeZero && !_isValidAmount(doubleValue)) {
+        } else if (!_isValidAmount(value, canBeZero)) {
           return 'Invalid value';
         }
         return null;
       };
 
   String? _stringFieldValidator(String? value) {
-    if (value == null || value.isEmpty) {
+    if (value == null || value.trim().isEmpty) {
       return 'Please enter some name';
     }
     return null;
@@ -80,34 +75,8 @@ class _AddProductFormState extends State<ProductFormScreen > {
   @override
   void initState() {
     super.initState();
-    final remoteProduct = widget.product;
-    final LocalProduct? localProduct = widget.localProduct;
-
-    if (localProduct != null) {
-      product = localProduct;
-      product.barcode = widget.barcode;
-      units.clear();
-      for (final MapEntry<String, double> unit in product.units.entries) {
-        units.add(_Unit(name: unit.key, value: unit.value));
-      }
-      units.add(_Unit());
-      hasContainer = product.containerSize != null;
-    } else if (remoteProduct != null) {
-      product.name = remoteProduct.productName ?? "";
-      product.barcode = widget.barcode;
-      final match = RegExp(r'[a-zA-Z]+').firstMatch(
-          remoteProduct.servingSize ?? "");
-      product.referenceUnit = match?.group(0) ?? "g";
-      product.referenceValue = remoteProduct.packagingQuantity ?? 100;
-      product.calories = remoteProduct.nutriments?.getValue(
-          Nutrient.energyKCal, PerSize.oneHundredGrams);
-      product.carbs = remoteProduct.nutriments?.getValue(
-          Nutrient.carbohydrates, PerSize.oneHundredGrams);
-      product.protein = remoteProduct.nutriments?.getValue(
-          Nutrient.proteins, PerSize.oneHundredGrams);
-      product.fat = remoteProduct.nutriments?.getValue(
-          Nutrient.fat, PerSize.oneHundredGrams);
-    }
+    // TODO: fetch form and unit data from viewModel?
+    // product = ...;
   }
 
   @override
@@ -144,7 +113,7 @@ class _AddProductFormState extends State<ProductFormScreen > {
                   hintText: "ex. Potatoes, [brand] ketchup",
                 ),
                 initialValue: product.name,
-                onChanged: (String? value) => product.name = value ?? "",
+                onChanged: (String? value) => product.name = value,
                 validator: _stringFieldValidator,
               ),
               Row(
@@ -161,15 +130,12 @@ class _AddProductFormState extends State<ProductFormScreen > {
                         hintText: 'ex. 100',
                       ),
                       textAlign: TextAlign.right,
-                      initialValue: referenceValue.toString(),
+                      initialValue: product.referenceValue.toString(),
                       onChanged: (String? value) =>
                           setState(() {
-                            referenceValue = double.tryParse(value ?? '');
+                            product.referenceValue = value;
                           }),
-                      validator: _doubleFieldValidator(
-                        doubleValue: product.referenceValue,
-                        canBeZero: false,
-                      ),
+                      validator: _doubleFieldValidator(),
                     ),
                   ),
                   SizedBox(width: 10),
@@ -219,13 +185,10 @@ class _AddProductFormState extends State<ProductFormScreen > {
                       enabled: hasContainer,
                       initialValue: product.containerSize?.toString(),
                       onChanged: (String? value) =>
-                      product.containerSize = double.tryParse(value ?? ""),
+                        product.containerSize = value,
                       validator: (String? value) {
                         if (!hasContainer) return null;
-                        return _doubleFieldValidator(
-                          doubleValue: product.containerSize,
-                          canBeZero: false,
-                        )(value);
+                        return _doubleFieldValidator()(value);
                       },
                     ),
                   ),
@@ -291,17 +254,12 @@ class _AddProductFormState extends State<ProductFormScreen > {
                                 prefixText: '1',
                               ),
                               onChanged: (String? value) {
-                                if (value == null || value.isEmpty) {
-                                  unit.name = null;
-                                }
-                                else {
-                                  unit.name = value;
-                                  if (unit.value != null &&
-                                      index == units.length - 1) {
-                                    setState(() {
-                                      units.add(_Unit());
-                                    });
-                                  }
+                                if (value != null && value.isNotEmpty
+                                    && unit.valueController.value.text.isNotEmpty
+                                ) {
+                                  setState(() {
+                                    units.add(_Unit());
+                                  });
                                 }
                               },
                             ),
@@ -323,22 +281,17 @@ class _AddProductFormState extends State<ProductFormScreen > {
                               ),
                               textAlign: TextAlign.right,
                               onChanged: (String? value) {
-                                if (value == null || value.isEmpty) {
-                                  unit.value = null;
-                                }
-                                else {
-                                  unit.value = double.parse(value);
-                                  if (unit.name != null &&
-                                      index == units.length - 1) {
-                                    setState(() {
-                                      units.add(_Unit());
-                                    });
-                                  }
+                                if (value != null && value.isNotEmpty
+                                    && unit.nameController.value.text.isNotEmpty
+                                ) {
+                                  setState(() {
+                                    units.add(_Unit());
+                                  });
                                 }
                               },
                               validator: (String? value) {
                                 if (value != null && value.isNotEmpty
-                                    && !_isValidAmount(unit.value)) {
+                                    && !_isValidAmount(value)) {
                                   return 'Invalid value';
                                 }
                                 return null;
@@ -377,7 +330,8 @@ class _AddProductFormState extends State<ProductFormScreen > {
                     children: [
                       Text(
                         'Nutrition Facts per '
-                            '${referenceValue ?? ""}${product.referenceUnit}',
+                            '${product.referenceValue ?? ""}'
+                            '${product.referenceUnit}',
                         style: theme.textTheme.titleMedium,
                         textAlign: TextAlign.left,
                       ),
@@ -393,9 +347,8 @@ class _AddProductFormState extends State<ProductFormScreen > {
                         textAlign: TextAlign.right,
                         initialValue: product.calories?.toString(),
                         onChanged: (String? value) =>
-                        product.calories = double.tryParse(value ?? ""),
-                        validator: _doubleFieldValidator(
-                            doubleValue: product.calories),
+                        product.calories = value,
+                        validator: _doubleFieldValidator(true),
                       ),
                       TextFormField(
                         keyboardType: TextInputType.numberWithOptions(
@@ -409,9 +362,8 @@ class _AddProductFormState extends State<ProductFormScreen > {
                         textAlign: TextAlign.right,
                         initialValue: product.carbs?.toString(),
                         onChanged: (String? value) =>
-                        product.carbs = double.tryParse(value ?? ""),
-                        validator: _doubleFieldValidator(
-                            doubleValue: product.carbs),
+                        product.carbs = value,
+                        validator: _doubleFieldValidator(),
                       ),
                       TextFormField(
                         keyboardType: TextInputType.numberWithOptions(
@@ -425,9 +377,8 @@ class _AddProductFormState extends State<ProductFormScreen > {
                         textAlign: TextAlign.right,
                         initialValue: product.protein?.toString(),
                         onChanged: (String? value) =>
-                        product.protein = double.tryParse(value ?? ""),
-                        validator: _doubleFieldValidator(
-                            doubleValue: product.protein),
+                        product.protein = value,
+                        validator: _doubleFieldValidator(),
                       ),
                       TextFormField(
                         keyboardType: TextInputType.numberWithOptions(
@@ -441,9 +392,8 @@ class _AddProductFormState extends State<ProductFormScreen > {
                         textAlign: TextAlign.right,
                         initialValue: product.fat?.toString(),
                         onChanged: (String? value) =>
-                        product.fat = double.tryParse(value ?? ""),
-                        validator: _doubleFieldValidator(
-                            doubleValue: product.fat),
+                        product.fat = value,
+                        validator: _doubleFieldValidator(),
                       ),
                     ],
                   ),
@@ -459,12 +409,14 @@ class _AddProductFormState extends State<ProductFormScreen > {
 
                       final unitsMap = <String, double>{};
                       for (final unit in units) {
-                        if (unit.name != null && unit.value != null) {
-                          unitsMap[unit.name!] = unit.value!;
+                        final name = unit.nameController.value.text;
+                        final value = double.tryParse(
+                            unit.valueController.value.text);
+                        if (name.isNotEmpty && _isValidAmountRaw(value, true)) {
+                          unitsMap[name] = value!;
                         }
                       }
                       product.units = unitsMap;
-                      product.referenceValue = referenceValue!;
 
                       widget.viewModel.addProduct(product);
                     }
