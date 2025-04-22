@@ -18,8 +18,27 @@ class AddProductScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Product details')),
+      body: ListenableBuilder(
+        listenable: viewModel,
+        builder: (context, child) {
+          if (!viewModel.loaded) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          else if (viewModel.product != null) {
+          }
+          else if (viewModel.form != null) {
+          }
+          return const Center(child: Text('Unexpected state'));
+        },
+      ),
+    );
+  }
+
+  Widget _build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Product details')),
       body: FutureBuilder(
-          future: viewModel.getProductData(),
+          future: viewModel.getProductDataOld(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
@@ -49,6 +68,7 @@ class AddProductScreen extends StatelessWidget {
                                     barcode: snapshot.data!.barcode,
                                     viewModel: ProductFormViewmodel(
                                       localProductRepository: context.read(),
+                                      externalProductRepository: context.read(),
                                     ),
                                   )
                               ),
@@ -67,6 +87,7 @@ class AddProductScreen extends StatelessWidget {
                   barcode: snapshot.data!.barcode,
                   viewModel: ProductFormViewmodel(
                     localProductRepository: context.read(),
+                    externalProductRepository: context.read(),
                   ),
                 );
               }

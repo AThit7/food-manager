@@ -6,6 +6,10 @@ class ProductFormModel {
       containerSize, calories, carbs, protein, fat;
   Map<String, double>? units;
 
+  ProductFormModel({this. barcode, this.name, this.referenceUnit,
+    this.referenceValue, this.containerSize, this.calories, this.carbs,
+  this.protein, this.fat});
+
   ProductFormModel.fromExternalProduct(ExternalProduct product) {
     barcode = product.barcode;
     name = product.name;

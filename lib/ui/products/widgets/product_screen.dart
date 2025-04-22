@@ -28,6 +28,7 @@ class ProductScreen extends StatelessWidget {
                     builder: (_) => ProductFormScreen(
                       viewModel: ProductFormViewmodel(
                         localProductRepository: context.read(),
+                        externalProductRepository: context.read(),
                       ),
                     ),
                   ),

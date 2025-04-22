@@ -41,9 +41,10 @@ class ProductFormScreen extends StatefulWidget {
 class _AddProductFormState extends State<ProductFormScreen > {
   // TODO: move from LocalProduct to LocalProductForm
   final _formKey = GlobalKey<FormState>();
-  late ProductFormModel product; // TODO: is late ok?
+  late ProductFormModel form; // TODO: is late ok?
   final List<_Unit> units = [_Unit()];
   bool hasContainer = true;
+  bool isFormReady = false;
   //double? referenceValue = 100; remove?
 
   bool _isValidAmountRaw(double? value, [bool canBeZero = false]) =>
@@ -76,7 +77,7 @@ class _AddProductFormState extends State<ProductFormScreen > {
   void initState() {
     super.initState();
     // TODO: fetch form and unit data from viewModel?
-    // product = ...;
+    // form = widget.form;
   }
 
   @override
@@ -102,9 +103,9 @@ class _AddProductFormState extends State<ProductFormScreen > {
             children: [
               TextFormField(
                 decoration: const InputDecoration(labelText: 'Bar code'),
-                initialValue: product.barcode,
+                initialValue: form.barcode,
                 onChanged: (String? value) {
-                  product.barcode = value;
+                  form.barcode = value;
                 },
               ),
               TextFormField(
@@ -112,8 +113,8 @@ class _AddProductFormState extends State<ProductFormScreen > {
                   labelText: 'Name',
                   hintText: "ex. Potatoes, [brand] ketchup",
                 ),
-                initialValue: product.name,
-                onChanged: (String? value) => product.name = value,
+                initialValue: form.name,
+                onChanged: (String? value) => form.name = value,
                 validator: _stringFieldValidator,
               ),
               Row(
@@ -130,10 +131,10 @@ class _AddProductFormState extends State<ProductFormScreen > {
                         hintText: 'ex. 100',
                       ),
                       textAlign: TextAlign.right,
-                      initialValue: product.referenceValue.toString(),
+                      initialValue: form.referenceValue.toString(),
                       onChanged: (String? value) =>
                           setState(() {
-                            product.referenceValue = value;
+                            form.referenceValue = value;
                           }),
                       validator: _doubleFieldValidator(),
                     ),
@@ -145,10 +146,10 @@ class _AddProductFormState extends State<ProductFormScreen > {
                           labelText: "Unit",
                           hintText: 'ex. g, ml'
                       ),
-                      initialValue: product.referenceUnit,
+                      initialValue: form.referenceUnit,
                       onChanged: (String? value) =>
                           setState(() {
-                            product.referenceUnit = value ?? "";
+                            form.referenceUnit = value ?? "";
                           }),
                       validator: _stringFieldValidator,
                     ),
@@ -179,13 +180,13 @@ class _AddProductFormState extends State<ProductFormScreen > {
                       decoration: InputDecoration(
                         labelText: "Container size",
                         hintText: 'ex. 250',
-                        suffixText: product.referenceUnit,
+                        suffixText: form.referenceUnit,
                       ),
                       textAlign: TextAlign.right,
                       enabled: hasContainer,
-                      initialValue: product.containerSize?.toString(),
+                      initialValue: form.containerSize?.toString(),
                       onChanged: (String? value) =>
-                        product.containerSize = value,
+                        form.containerSize = value,
                       validator: (String? value) {
                         if (!hasContainer) return null;
                         return _doubleFieldValidator()(value);
@@ -277,7 +278,7 @@ class _AddProductFormState extends State<ProductFormScreen > {
                               decoration: InputDecoration(
                                 labelText: 'Amount',
                                 hintText: 'ex. 120',
-                                suffixText: product.referenceUnit,
+                                suffixText: form.referenceUnit,
                               ),
                               textAlign: TextAlign.right,
                               onChanged: (String? value) {
@@ -330,8 +331,8 @@ class _AddProductFormState extends State<ProductFormScreen > {
                     children: [
                       Text(
                         'Nutrition Facts per '
-                            '${product.referenceValue ?? ""}'
-                            '${product.referenceUnit}',
+                            '${form.referenceValue ?? ""}'
+                            '${form.referenceUnit}',
                         style: theme.textTheme.titleMedium,
                         textAlign: TextAlign.left,
                       ),
@@ -345,9 +346,9 @@ class _AddProductFormState extends State<ProductFormScreen > {
                           suffixText: 'kcal',
                         ),
                         textAlign: TextAlign.right,
-                        initialValue: product.calories?.toString(),
+                        initialValue: form.calories?.toString(),
                         onChanged: (String? value) =>
-                        product.calories = value,
+                        form.calories = value,
                         validator: _doubleFieldValidator(true),
                       ),
                       TextFormField(
@@ -360,9 +361,9 @@ class _AddProductFormState extends State<ProductFormScreen > {
                           suffixText: 'g',
                         ),
                         textAlign: TextAlign.right,
-                        initialValue: product.carbs?.toString(),
+                        initialValue: form.carbs?.toString(),
                         onChanged: (String? value) =>
-                        product.carbs = value,
+                        form.carbs = value,
                         validator: _doubleFieldValidator(),
                       ),
                       TextFormField(
@@ -375,9 +376,9 @@ class _AddProductFormState extends State<ProductFormScreen > {
                           suffixText: 'g',
                         ),
                         textAlign: TextAlign.right,
-                        initialValue: product.protein?.toString(),
+                        initialValue: form.protein?.toString(),
                         onChanged: (String? value) =>
-                        product.protein = value,
+                        form.protein = value,
                         validator: _doubleFieldValidator(),
                       ),
                       TextFormField(
@@ -390,9 +391,9 @@ class _AddProductFormState extends State<ProductFormScreen > {
                           suffixText: 'g',
                         ),
                         textAlign: TextAlign.right,
-                        initialValue: product.fat?.toString(),
+                        initialValue: form.fat?.toString(),
                         onChanged: (String? value) =>
-                        product.fat = value,
+                        form.fat = value,
                         validator: _doubleFieldValidator(),
                       ),
                     ],
@@ -416,9 +417,9 @@ class _AddProductFormState extends State<ProductFormScreen > {
                           unitsMap[name] = value!;
                         }
                       }
-                      product.units = unitsMap;
+                      form.units = unitsMap;
 
-                      widget.viewModel.addProduct(product);
+                      widget.viewModel.addProduct(form);
                     }
                   },
                   child: const Text('Submit'),

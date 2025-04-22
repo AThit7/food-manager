@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:food_manager/domain/models/product/local_product.dart';
+import 'package:food_manager/core/result/repo_result.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:provider/provider.dart';
 import '../../../data/services/scanner_service.dart';
 import '../../../data/repositories/local_product_repository.dart';
 import '../../products/widgets/add_product_screen.dart';
@@ -24,14 +25,15 @@ class ScannerViewModel extends ChangeNotifier {
   MobileScannerController get controller => _scannerService.controller;
 
   Future<void> handleBarcode(BuildContext context, String barcode) async {
-    LocalProduct? product = await _localProductRepository.getProductByBarcode(barcode);
+    RepoResult? result = await _localProductRepository.getProductByBarcode(
+        barcode);
     if (!context.mounted) return;
-    if (product != null) {
+    if (result is RepoSuccess) {
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => ProductScreen(
-              product: product,
+              product: result.data,
             ),
           ),
         );
@@ -39,8 +41,12 @@ class ScannerViewModel extends ChangeNotifier {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => AddProductScreen(
-              viewModel: AddProductViewmodel(productBarcode: barcode),
+          builder: (_) => AddProductScreen(
+            viewModel: AddProductViewmodel(
+              barcode: barcode,
+              localProductRepository: context.read(),
+              externalProductRepository: context.read(),
+            ),
           ),
         ),
       );

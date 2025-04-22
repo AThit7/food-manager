@@ -18,7 +18,6 @@ class HomeScreen extends StatelessWidget {
           children: [
             ElevatedButton(
               onPressed: () {
-                // Directly push a new screen onto the navigator stack
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -36,7 +35,6 @@ class HomeScreen extends StatelessWidget {
             ),
             ElevatedButton(
               onPressed: () {
-                // Directly push a new screen onto the navigator stack
                 Navigator.push(
                   context,
                   MaterialPageRoute(

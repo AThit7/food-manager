@@ -1,3 +1,4 @@
+import '../../core/result/repo_result.dart';
 import '../../domain/models/product/local_product.dart';
 import '../../data/services/database/database_service.dart';
 import '../../data/database/schema/product_schema.dart';
@@ -58,14 +59,14 @@ class LocalProductRepository{
       batch.commit();
   }
 
-  Future<List<LocalProduct>> listProducts() async {
+  Future<RepoResult<List<LocalProduct>>> listProducts() async {
     final List<Map<String, Object?>> productMaps = await _db.query(
         ProductSchema.table);
 
-    return productMaps.map(_localProductFromMap).toList();
+    return RepoSuccess(productMaps.map(_localProductFromMap).toList());
   }
 
-  Future<LocalProduct?> getProduct(int id) async {
+  Future<RepoResult<LocalProduct?>> getProduct(int id) async {
     final List<Map<String, Object?>> productMaps = await _db.query(
       'products',
       where: 'id = ?',
@@ -73,12 +74,12 @@ class LocalProductRepository{
     );
 
     if (productMaps.firstOrNull == null) {
-      return null;
+      return RepoFailure("No product with id $id");
     }
-    return _localProductFromMap(productMaps.firstOrNull!);
+    return RepoSuccess(_localProductFromMap(productMaps.firstOrNull!));
   }
 
-  Future<Map<String, double>> getProductUnits(int id) async {
+  Future<RepoResult<Map<String, double>>> getProductUnits(int id) async {
     final List<Map<String, Object?>> unitMaps = await _db.query(
       UnitSchema.table,
       where: '${UnitSchema.productId} = ?',
@@ -92,10 +93,10 @@ class LocalProductRepository{
       result[name] = value;
     }
 
-    return result;
+    return RepoSuccess(result);
   }
 
-  Future<LocalProduct?> getProductByBarcode(String barcode) async {
+  Future<RepoResult<LocalProduct?>> getProductByBarcode(String barcode) async {
     final List<Map<String, Object?>> productMaps = await _db.query(
       ProductSchema.table,
       where: '${ProductSchema.barcode} = ?',
@@ -103,8 +104,8 @@ class LocalProductRepository{
     );
 
     if (productMaps.firstOrNull == null) {
-      return null;
+      return RepoFailure("No product with barcode $barcode");
     }
-    return _localProductFromMap(productMaps.firstOrNull!);
+    return RepoSuccess(_localProductFromMap(productMaps.firstOrNull!));
   }
 }

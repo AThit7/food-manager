@@ -18,6 +18,7 @@ class ScannerScreen extends StatefulWidget {
   State<ScannerScreen> createState() => _ScannerScreenState();
 }
 
+// TODO: change to stateless
 class _ScannerScreenState extends State<ScannerScreen> {
   Barcode? _barcode;
   final MobileScannerController scannerController = MobileScannerController();
@@ -39,19 +40,19 @@ class _ScannerScreenState extends State<ScannerScreen> {
   }
 
   void Function(BarcodeCapture)? _handleBarcode(BuildContext context) =>
-          (BarcodeCapture barcodes) async {
-            if (!mounted) return;
+    (BarcodeCapture barcodes) async {
+      if (!mounted) return;
 
-            setState(() {
-              _barcode = barcodes.barcodes.firstOrNull;
-            });
+      setState(() {
+        _barcode = barcodes.barcodes.firstOrNull;
+      });
 
-            String? barcode = barcodes.barcodes.first.displayValue;
-            if (barcode == null) return;
+      String? barcode = barcodes.barcodes.first.displayValue;
+      if (barcode == null) return;
 
-            Navigator.pop(context);
-            widget.viewModel.handleBarcode(context, barcode);
-          };
+      Navigator.pop(context);
+      widget.viewModel.handleBarcode(context, barcode);
+    };
 
   @override
   Widget build(BuildContext context) {
@@ -117,13 +118,15 @@ class _ScannerScreenStateBkp extends State<ScannerScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (context) {
-                              final viewModel = AddProductViewmodel(
-                                  productBarcode :
-                                  capture.barcodes.first.displayValue,
-                              );
-                              return AddProductScreen(viewModel: viewModel);
-                            }
+                          builder: (context) {
+                            final viewModel = AddProductViewmodel(
+                              barcode :
+                              capture.barcodes.first.displayValue,
+                              localProductRepository: context.read(),
+                              externalProductRepository: context.read(),
+                            );
+                            return AddProductScreen(viewModel: viewModel);
+                          }
                         ),
                       );                    }
                   },
