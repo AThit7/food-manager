@@ -24,6 +24,6 @@ abstract class ProductSchema {
       $carbs REAL NOT NULL CHECK ($carbs >= 0),
       $protein REAL NOT NULL CHECK ($protein >= 0),
       $fat REAL NOT NULL CHECK ($fat >= 0)
-    ) STRICT
+    )
   ''';
 }

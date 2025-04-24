@@ -17,6 +17,6 @@ abstract class UnitSchema {
       FOREIGN KEY($productId)
           REFERENCES ${ProductSchema.table}(${ProductSchema.id})
           ON DELETE CASCADE
-    ) STRICT
+    )
   ''';
 }

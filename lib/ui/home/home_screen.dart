@@ -24,7 +24,6 @@ class HomeScreen extends StatelessWidget {
                       builder: (context) {
                         final viewModel = ScannerViewModel(
                             localProductRepository: context.read(),
-                            scannerService: context.read()
                         );
                         return ScannerScreen(viewModel: viewModel);
                       }

@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:provider/provider.dart';
 
 import '../view_models/scanner_viewmodel.dart';
-import '../../products/view_models/add_product_viewmodel.dart';
-import '../../products/widgets/add_product_screen.dart';
 
 class ScannerScreen extends StatefulWidget {
   const ScannerScreen({
@@ -80,74 +77,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ScannerScreenStateBkp extends State<ScannerScreen> {
-  @override
-  void initState() {
-    super.initState();
-    widget.viewModel.startScanner();
-  }
-
-  @override
-  void dispose() {
-    widget.viewModel.stopScanner();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Scanner Screen')),
-      body: Center(
-        child: Column(
-          children: [
-            Stack(
-              children: [
-                // Add MobileScanner widget here
-                MobileScanner(
-                  controller: widget.viewModel.controller,
-                  onDetect: (BarcodeCapture capture) {
-                    if (capture.barcodes.isNotEmpty) {
-                      final barcodeValue = capture.barcodes.first.displayValue;
-                      widget.viewModel.updateScannedData(barcodeValue);
-
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) {
-                            final viewModel = AddProductViewmodel(
-                              barcode :
-                              capture.barcodes.first.displayValue,
-                              localProductRepository: context.read(),
-                              externalProductRepository: context.read(),
-                            );
-                            return AddProductScreen(viewModel: viewModel);
-                          }
-                        ),
-                      );                    }
-                  },
-                  fit: BoxFit.contain,
-                ),
-                if (widget.viewModel.scannedData != null)
-                  Align(
-                    alignment: Alignment.bottomCenter,
-                    child: Container(
-                      color: Colors.black.withOpacity(0.7),
-                      padding: const EdgeInsets.all(8.0),
-                      child: Text(
-                        widget.viewModel.scannedData!,
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }

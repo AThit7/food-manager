@@ -19,7 +19,7 @@ class DatabaseServiceSqflite implements DatabaseService {
     _db = await openDatabase(
       dbPath,
       onConfigure: (db) async {
-        await _db.execute("PRAGMA foreign_keys = ON");
+        await db.execute("PRAGMA foreign_keys = ON");
       },
       onCreate: _onCreate,
       version: 1,
