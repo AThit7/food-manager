@@ -1,19 +1,19 @@
 import 'product_schema.dart';
 
-abstract class UnitSchema {
-  static const table = 'units';
+abstract class PantryItemSchema {
+  static const table = 'items';
 
   static const id = 'id';
-  static const name = 'name';
   static const productId = 'product_id';
-  static const multiplier = 'multiplier';
+  static const quantity = 'quantity';
+  static const expirationDate = 'expiration_date';
 
   static const create = '''
     CREATE TABLE $table (
       $id INTEGER PRIMARY KEY,
       $productId INTEGER NOT NULL,
-      $name TEXT NOT NULL CHECK (length(trim($name)) > 0),
-      $multiplier REAL NOT NULL CHECK ($multiplier > 0),
+      $quantity REAL NOT NULL CHECK ($quantity >= 0).
+      $expirationDate INTEGER NOT NULL CHECK ($expirationDate > 0), -- Unix time
       
       FOREIGN KEY ($productId)
         REFERENCES ${ProductSchema.table}(${ProductSchema.id})

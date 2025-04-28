@@ -1,12 +1,12 @@
 class LocalProduct {
-  final int? id;
+  final int? id, shelfLifeAfterOpening;
   final String name, referenceUnit;
   final String? barcode;
   final Map<String, double> units;
   final double referenceValue, calories, carbs, protein, fat;
   final double? containerSize;
 
-  LocalProduct({
+  const LocalProduct({
     required this.name,
     required this.units,
     required this.referenceUnit,
@@ -18,5 +18,22 @@ class LocalProduct {
     this.id,
     this.barcode,
     this.containerSize,
+    this.shelfLifeAfterOpening,
   });
+
+  LocalProduct copyWith({int? id}) {
+    return LocalProduct(
+      id: id ?? this.id,
+      name: name,
+      units: units,
+      referenceUnit: referenceUnit,
+      referenceValue: referenceValue,
+      calories: calories,
+      carbs: carbs,
+      protein: protein,
+      fat: fat,
+      barcode: barcode,
+      containerSize: containerSize,
+    );
+  }
 }

@@ -23,6 +23,11 @@ abstract class DatabaseService {
     int? offset,
   });
 
+  Future<List<Map<String, Object?>>> rawQuery(
+    String sql, [
+    List<Object?>? arguments
+  ]);
+
   Future<int> delete(String table, {String? where, List<Object?>? whereArgs});
 
   DbBatch batch();
@@ -48,6 +53,11 @@ abstract class DbBatch {
     int? limit,
     int? offset,
   });
+
+  void rawQuery(
+    String sql, [
+    List<Object?>? arguments
+  ]);
 
   void delete(String table, {String? where, List<Object?>? whereArgs});
 

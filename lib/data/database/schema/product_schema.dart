@@ -11,6 +11,7 @@ abstract class ProductSchema {
   static const carbs = 'carbs';
   static const protein = 'protein';
   static const fat = 'fat';
+  static const shelfLifeAfterOpening = 'shelf_life_after_opening';
 
   static const create = '''
     CREATE TABLE $table (
@@ -23,7 +24,10 @@ abstract class ProductSchema {
       $calories REAL NOT NULL CHECK ($calories >= 0),
       $carbs REAL NOT NULL CHECK ($carbs >= 0),
       $protein REAL NOT NULL CHECK ($protein >= 0),
-      $fat REAL NOT NULL CHECK ($fat >= 0)
+      $fat REAL NOT NULL CHECK ($fat >= 0),
+      $shelfLifeAfterOpening
+        INTEGER NOT NULL
+        CHECK ($shelfLifeAfterOpening >= 0)
     )
   ''';
 }

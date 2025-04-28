@@ -12,13 +12,4 @@ class LocalRecipe {
     this.instructions,
     this.id,
   });
-
-  Map<String, Object?> toMap() {
-    return {
-      'id': id,
-      'name': name,
-      'ingredients': ingredients,
-      'instructions': instructions,
-    };
-  }
 }

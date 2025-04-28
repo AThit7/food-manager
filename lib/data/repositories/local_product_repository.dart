@@ -11,32 +11,33 @@ class LocalProductRepository{
 
   Map<String, dynamic> _localProductToMap(LocalProduct product) {
     return {
-      'id': product.id,
-      'name': product.name,
-      'barcode': product.barcode,
-      'referenceUnit': product.referenceUnit,
-      'referenceValue': product.referenceValue,
-      'containerSize': product.containerSize,
-      'calories': product.calories,
-      'carbs': product.carbs,
-      'protein': product.protein,
-      'fat': product.fat,
+      ProductSchema.id: product.id,
+      ProductSchema.name: product.name,
+      ProductSchema.barcode: product.barcode,
+      ProductSchema.referenceUnit: product.referenceUnit,
+      ProductSchema.referenceValue: product.referenceValue,
+      ProductSchema.containerSize: product.containerSize,
+      ProductSchema.calories: product.calories,
+      ProductSchema.carbs: product.carbs,
+      ProductSchema.protein: product.protein,
+      ProductSchema.fat: product.fat,
+      ProductSchema.shelfLifeAfterOpening: product.shelfLifeAfterOpening,
     };
   }
 
   LocalProduct _localProductFromMap(Map<String, dynamic> productMap) {
     return LocalProduct(
-      id: productMap['id'] as int,
-      name: productMap['name'] as String,
-      barcode: productMap['barcode'] as String?,
-      referenceUnit: productMap['referenceUnit'] as String,
-      referenceValue: productMap['referenceValue'] as double,
+      id: productMap[ProductSchema.id] as int,
+      name: productMap[ProductSchema.name] as String,
+      barcode: productMap[ProductSchema.barcode] as String?,
+      referenceUnit: productMap[ProductSchema.referenceUnit] as String,
+      referenceValue: productMap[ProductSchema.referenceValue] as double,
       units: {},
-      containerSize: productMap['containerSize'] as double?,
-      calories: productMap['calories'] as double,
-      carbs: productMap['carbs'] as double,
-      protein: productMap['protein'] as double,
-      fat: productMap['fat'] as double,
+      containerSize: productMap[ProductSchema.containerSize] as double?,
+      calories: productMap[ProductSchema.calories] as double,
+      carbs: productMap[ProductSchema.carbs] as double,
+      protein: productMap[ProductSchema.protein] as double,
+      fat: productMap[ProductSchema.fat] as double,
     );
 
   }

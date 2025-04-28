@@ -63,6 +63,14 @@ class DatabaseServiceSqflite implements DatabaseService {
   }
 
   @override
+  Future<List<Map<String, Object?>>> rawQuery(
+    String sql, [
+    List<Object?>? arguments
+  ]) {
+    return _db.rawQuery(sql, arguments);
+  }
+
+  @override
   Future<int> delete(String table, {String? where, List<Object?>? whereArgs}) {
     return _db.delete(table, where: where, whereArgs: whereArgs);
   }
@@ -119,5 +127,13 @@ class _DbBatchSqflite implements DbBatch{
     return _batch.query(table, columns:  columns, where: where,
         whereArgs: whereArgs, groupBy: groupBy, having: having,
         orderBy: orderBy, limit: limit, offset: offset);
+  }
+
+  @override
+  void rawQuery(
+    String sql, [
+    List<Object?>? arguments
+  ]) {
+    return _batch.rawQuery(sql, arguments);
   }
 }

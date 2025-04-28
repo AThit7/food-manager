@@ -12,10 +12,10 @@ class ProductValidator{
     if (product.referenceUnit.trim().isEmpty) {
       throw ValidationError("Invalid reference unit.");
     }
-    if (product.barcode == null || product.barcode!.trim().isEmpty) {
+    if (product.barcode != null && product.barcode!.trim().isEmpty) {
       throw ValidationError("Invalid barcode.");
     }
-    if (product.containerSize == null ||
+    if (product.containerSize != null &&
         !_isValidDouble(product.containerSize!)) {
       throw ValidationError("Invalid container size.");
     }
@@ -30,12 +30,15 @@ class ProductValidator{
       throw ValidationError("Invalid protein.");
     }
     if (!_isValidDouble(product.fat)) throw ValidationError("Invalid fat.");
+    if (product.shelfLifeAfterOpening != null &&
+        product.shelfLifeAfterOpening! >= 0) {
+      throw ValidationError("Invalid shelf life after opening.");
+    }
     product.units.forEach((key, value) {
       if (key.trim().isEmpty) throw ValidationError("Invalid barcode.");
       if (!_isValidDouble(value)) {
         throw ValidationError("Invalid reference value.");
       }
-
     });
   }
 
