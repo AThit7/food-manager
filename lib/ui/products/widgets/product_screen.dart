@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:food_manager/domain/models/product/local_product.dart';
+import 'package:food_manager/ui/products/models/product_form_model.dart';
 import 'package:food_manager/ui/products/widgets/product_form_screen.dart';
 import 'package:provider/provider.dart';
 
@@ -26,6 +27,7 @@ class ProductScreen extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (_) => ProductFormScreen(
+                      form: ProductFormModel.fromLocalProduct(product),
                       viewModel: ProductFormViewmodel(
                         localProductRepository: context.read(),
                         externalProductRepository: context.read(),

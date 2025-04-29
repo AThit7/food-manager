@@ -1,10 +1,10 @@
+import 'dart:developer';
 import 'package:flutter/cupertino.dart';
 import 'package:food_manager/core/result/repo_result.dart';
 import 'package:food_manager/data/repositories/external_product_repository.dart';
 import 'package:food_manager/data/repositories/local_product_repository.dart';
 import 'package:food_manager/domain/models/product/local_product.dart';
 import 'package:food_manager/ui/products/models/product_form_model.dart';
-import 'package:openfoodfacts/openfoodfacts.dart';
 
 class AddProductViewmodel extends ChangeNotifier {
   AddProductViewmodel({
@@ -12,30 +12,19 @@ class AddProductViewmodel extends ChangeNotifier {
     required ExternalProductRepository externalProductRepository,
     required LocalProductRepository localProductRepository,
   }) : _externalProductRepository = externalProductRepository,
-        _localProductRepository = localProductRepository,
-        _configuration = ProductQueryConfiguration(
-          barcode ?? "",
-          language: OpenFoodFactsLanguage.ENGLISH,
-          version: ProductQueryVersion.v3,
-        );
+        _localProductRepository = localProductRepository;
 
-  final ProductQueryConfiguration _configuration;
   final ExternalProductRepository _externalProductRepository;
   final LocalProductRepository _localProductRepository;
   final String? barcode;
   LocalProduct? product;
   ProductFormModel? form;
   bool loaded = false;
-
-  Future<ProductResultV3> getProductDataOld() async {
-    if (barcode == null) {
-      return Future.error("Barcode doesn't have a user-friendly value.");
-    }
-    return await OpenFoodAPIClient.getProductV3(_configuration);
-  }
+  bool navigated = false;
 
   Future<void> loadProductData() async {
     loaded = false;
+    log('Loading product data for barcode $barcode');
     if (barcode == null) {
       product = null;
       form = ProductFormModel();
@@ -43,6 +32,7 @@ class AddProductViewmodel extends ChangeNotifier {
       notifyListeners();
       return;
     }
+    log('Querying local database');
     final localResult = await _localProductRepository.getProductByBarcode(
         barcode!);
     switch (localResult) {
@@ -51,6 +41,7 @@ class AddProductViewmodel extends ChangeNotifier {
         form = ProductFormModel.fromLocalProduct(product!);
       }
       case RepoFailure(): {
+        log('Querying remote API');
         final remoteResult = await _externalProductRepository.getProduct(
             barcode!);
         switch (remoteResult) {
@@ -63,10 +54,10 @@ class AddProductViewmodel extends ChangeNotifier {
             form = ProductFormModel(barcode: barcode);
           }
         }
-
       }
     }
     loaded = true;
+    log('Loading done.');
     notifyListeners();
   }
 }

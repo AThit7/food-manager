@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:openfoodfacts/openfoodfacts.dart';
 
 import '../view_models/product_form_viewmodel.dart';
-import '../../../domain/models/product/local_product.dart';
 import '../models/product_form_model.dart';
 
 class _Unit {
@@ -24,27 +22,24 @@ class ProductFormScreen extends StatefulWidget {
   const ProductFormScreen ({
     super.key,
     required this.viewModel,
-    this.barcode,
-    this.product,
-    this.localProduct,
+    this.form,
   });
 
-  final Product? product;
-  final String? barcode;
   final ProductFormViewmodel viewModel;
-  final LocalProduct? localProduct;
+  final ProductFormModel? form;
 
   @override
   State<ProductFormScreen > createState() => _AddProductFormState();
 }
 
+// TODO: add shelf life field to form (and tag)
 class _AddProductFormState extends State<ProductFormScreen > {
-  // TODO: move from LocalProduct to LocalProductForm
   final _formKey = GlobalKey<FormState>();
-  late ProductFormModel form; // TODO: is late ok?
+  late ProductFormModel form;
   final List<_Unit> units = [_Unit()];
+  late TextEditingController containerSizeController;
   bool hasContainer = true;
-  bool isFormReady = false;
+  bool isSubmitting = false;
   //double? referenceValue = 100; remove?
 
   bool _isValidAmountRaw(double? value, [bool canBeZero = false]) =>
@@ -76,8 +71,15 @@ class _AddProductFormState extends State<ProductFormScreen > {
   @override
   void initState() {
     super.initState();
-    // TODO: fetch form and unit data from viewModel?
-    // form = widget.form;
+    if (widget.form != null) {
+      form = widget.form!.copyWith();
+    } else {
+      form = ProductFormModel();
+    }
+    hasContainer = form.containerSize != null;
+    containerSizeController = TextEditingController(text: form.containerSize);
+
+    // TODO: load units
   }
 
   @override
@@ -85,6 +87,7 @@ class _AddProductFormState extends State<ProductFormScreen > {
     for (final unit in units) {
       unit.dispose();
     }
+    containerSizeController.dispose();
     super.dispose();
   }
 
@@ -95,14 +98,19 @@ class _AddProductFormState extends State<ProductFormScreen > {
       FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
     ];
 
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Form(
+    return Scaffold(
+      appBar: AppBar(title: form.id != null
+          ? const Text('Modify product')
+          : const Text('Add product')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
           key: _formKey,
           child: ListView(
             children: [
               TextFormField(
                 decoration: const InputDecoration(labelText: 'Bar code'),
+                enabled: !isSubmitting,
                 initialValue: form.barcode,
                 onChanged: (String? value) {
                   form.barcode = value;
@@ -113,6 +121,7 @@ class _AddProductFormState extends State<ProductFormScreen > {
                   labelText: 'Name',
                   hintText: "ex. Potatoes, [brand] ketchup",
                 ),
+                enabled: !isSubmitting,
                 initialValue: form.name,
                 onChanged: (String? value) => form.name = value,
                 validator: _stringFieldValidator,
@@ -130,8 +139,9 @@ class _AddProductFormState extends State<ProductFormScreen > {
                         labelText: "Amount",
                         hintText: 'ex. 100',
                       ),
+                      enabled: !isSubmitting,
                       textAlign: TextAlign.right,
-                      initialValue: form.referenceValue.toString(),
+                      initialValue: form.referenceValue?.toString(),
                       onChanged: (String? value) =>
                           setState(() {
                             form.referenceValue = value;
@@ -146,6 +156,7 @@ class _AddProductFormState extends State<ProductFormScreen > {
                           labelText: "Unit",
                           hintText: 'ex. g, ml'
                       ),
+                      enabled: !isSubmitting,
                       initialValue: form.referenceUnit,
                       onChanged: (String? value) =>
                           setState(() {
@@ -162,9 +173,13 @@ class _AddProductFormState extends State<ProductFormScreen > {
                     scale: 0.85,
                     child: Switch(
                       value: hasContainer,
-                      onChanged: (bool value) {
+                      onChanged: isSubmitting ? null : (bool value) {
                         setState(() {
                           hasContainer = value;
+                          if (!value) {
+                            containerSizeController.clear();
+                            form.containerSize = null;
+                          }
                         });
                       },
                     ),
@@ -174,6 +189,7 @@ class _AddProductFormState extends State<ProductFormScreen > {
                   SizedBox(width: 10),
                   Expanded(
                     child: TextFormField(
+                      controller: containerSizeController,
                       keyboardType: TextInputType.numberWithOptions(
                           decimal: true),
                       inputFormatters: amountFormatters,
@@ -183,10 +199,9 @@ class _AddProductFormState extends State<ProductFormScreen > {
                         suffixText: form.referenceUnit,
                       ),
                       textAlign: TextAlign.right,
-                      enabled: hasContainer,
-                      initialValue: form.containerSize?.toString(),
+                      enabled: hasContainer && !isSubmitting,
                       onChanged: (String? value) =>
-                        form.containerSize = value,
+                      form.containerSize = value,
                       validator: (String? value) {
                         if (!hasContainer) return null;
                         return _doubleFieldValidator()(value);
@@ -239,10 +254,7 @@ class _AddProductFormState extends State<ProductFormScreen > {
                   childrenPadding: const EdgeInsets.all(16.0),
                   backgroundColor: theme.colorScheme.surfaceContainer,
                   children: [
-                    ...units.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final _Unit unit = entry.value;
-
+                    ...units.map((final unit) {
                       return Row(
                         children: [
                           Expanded(
@@ -254,9 +266,11 @@ class _AddProductFormState extends State<ProductFormScreen > {
                                 hintText: 'ex. ml, cup',
                                 prefixText: '1',
                               ),
+                              enabled: !isSubmitting,
                               onChanged: (String? value) {
                                 if (value != null && value.isNotEmpty
                                     && unit.valueController.value.text.isNotEmpty
+                                    && units.last == unit
                                 ) {
                                   setState(() {
                                     units.add(_Unit());
@@ -280,10 +294,12 @@ class _AddProductFormState extends State<ProductFormScreen > {
                                 hintText: 'ex. 120',
                                 suffixText: form.referenceUnit,
                               ),
+                              enabled: !isSubmitting,
                               textAlign: TextAlign.right,
                               onChanged: (String? value) {
                                 if (value != null && value.isNotEmpty
                                     && unit.nameController.value.text.isNotEmpty
+                                    && units.last == unit
                                 ) {
                                   setState(() {
                                     units.add(_Unit());
@@ -301,15 +317,14 @@ class _AddProductFormState extends State<ProductFormScreen > {
                           ),
                           IconButton(
                             icon: const Icon(Icons.remove_circle, size: 20),
-                            onPressed: () {
+                            onPressed: isSubmitting? null : () {
                               setState(() {
-                                if(units.length - 1 == index) {
-                                  // TODO: should it stay?
+                                if(units.last == unit) {
                                   unit.nameController.clear();
                                   unit.valueController.clear();
                                 }
                                 else {
-                                  units.removeAt(index);
+                                  units.remove(unit);
                                 }
                               });
                             },
@@ -345,6 +360,7 @@ class _AddProductFormState extends State<ProductFormScreen > {
                           hintText: 'ex. 106',
                           suffixText: 'kcal',
                         ),
+                        enabled: !isSubmitting,
                         textAlign: TextAlign.right,
                         initialValue: form.calories?.toString(),
                         onChanged: (String? value) =>
@@ -360,11 +376,12 @@ class _AddProductFormState extends State<ProductFormScreen > {
                           hintText: 'ex. 36',
                           suffixText: 'g',
                         ),
+                        enabled: !isSubmitting,
                         textAlign: TextAlign.right,
                         initialValue: form.carbs?.toString(),
                         onChanged: (String? value) =>
                         form.carbs = value,
-                        validator: _doubleFieldValidator(),
+                        validator: _doubleFieldValidator(true),
                       ),
                       TextFormField(
                         keyboardType: TextInputType.numberWithOptions(
@@ -375,11 +392,12 @@ class _AddProductFormState extends State<ProductFormScreen > {
                           hintText: 'ex. 20',
                           suffixText: 'g',
                         ),
+                        enabled: !isSubmitting,
                         textAlign: TextAlign.right,
                         initialValue: form.protein?.toString(),
                         onChanged: (String? value) =>
                         form.protein = value,
-                        validator: _doubleFieldValidator(),
+                        validator: _doubleFieldValidator(true),
                       ),
                       TextFormField(
                         keyboardType: TextInputType.numberWithOptions(
@@ -390,11 +408,12 @@ class _AddProductFormState extends State<ProductFormScreen > {
                           hintText: 'ex. 20',
                           suffixText: 'g',
                         ),
+                        enabled: !isSubmitting,
                         textAlign: TextAlign.right,
                         initialValue: form.fat?.toString(),
                         onChanged: (String? value) =>
                         form.fat = value,
-                        validator: _doubleFieldValidator(),
+                        validator: _doubleFieldValidator(true),
                       ),
                     ],
                   ),
@@ -403,7 +422,7 @@ class _AddProductFormState extends State<ProductFormScreen > {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16.0),
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: isSubmitting ? null : () async {
                     // validate returns true if the form is valid
                     if (_formKey.currentState!.validate()) {
                       _formKey.currentState!.save();
@@ -419,14 +438,38 @@ class _AddProductFormState extends State<ProductFormScreen > {
                       }
                       form.units = unitsMap;
 
-                      widget.viewModel.addProduct(form);
+                      setState(() => isSubmitting = true);
+                      await Future.delayed(const Duration(seconds: 8));
+                      final result = await widget.viewModel.saveProduct(
+                          form.copyWith());
+                      if (!context.mounted) return;
+
+                      switch (result) {
+                        case InsertSuccess():
+                          Navigator.pop(context);
+                        case InsertValidationFailure():
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text("Failed to add product. "
+                                  "Invalid product details.")));
+                        case InsertRepoFailure():
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text("Unexpected error.")));
+                      }
+
+                      setState(() => isSubmitting = false);
                     }
                   },
-                  child: const Text('Submit'),
+                  child: isSubmitting
+                      ? Transform.scale(
+                          scale: 0.5,
+                          child: CircularProgressIndicator(),
+                        )
+                      : const Text('Submit'),
                 ),
               ),
             ],
-          )
+          ),
+        ),
       ),
     );
   }

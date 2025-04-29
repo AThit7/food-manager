@@ -14,9 +14,8 @@ class AllProductsViewmodel extends ChangeNotifier {
   Future<List<LocalProduct>> getProducts() async {
     final result =  await _localProductRepository.listProducts();
     switch (result) {
-      case RepoSuccess(): result.data;
-      case RepoFailure(): [];
+      case RepoSuccess(): return result.data;
+      case RepoFailure(): return [];
     }
-    return []; // TODO: ??
   }
 }

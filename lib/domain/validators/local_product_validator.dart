@@ -22,14 +22,14 @@ class ProductValidator{
     if (!_isValidDouble(product.referenceValue)) {
       throw ValidationError("Invalid reference value.");
     }
-    if (!_isValidDouble(product.calories)) {
+    if (!_isValidDouble(product.calories, true)) {
       throw ValidationError("Invalid calories.");
     }
-    if (!_isValidDouble(product.carbs)) throw ValidationError("Invalid carbs.");
-    if (!_isValidDouble(product.protein)) {
+    if (!_isValidDouble(product.carbs, true)) throw ValidationError("Invalid carbs.");
+    if (!_isValidDouble(product.protein, true)) {
       throw ValidationError("Invalid protein.");
     }
-    if (!_isValidDouble(product.fat)) throw ValidationError("Invalid fat.");
+    if (!_isValidDouble(product.fat, true)) throw ValidationError("Invalid fat.");
     if (product.shelfLifeAfterOpening != null &&
         product.shelfLifeAfterOpening! >= 0) {
       throw ValidationError("Invalid shelf life after opening.");

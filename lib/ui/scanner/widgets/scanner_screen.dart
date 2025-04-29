@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:food_manager/ui/products/view_models/add_product_viewmodel.dart';
+import 'package:food_manager/ui/products/widgets/add_product_screen.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:provider/provider.dart';
 
 import '../view_models/scanner_viewmodel.dart';
 
@@ -47,8 +50,18 @@ class _ScannerScreenState extends State<ScannerScreen> {
       String? barcode = barcodes.barcodes.first.displayValue;
       if (barcode == null) return;
 
-      Navigator.pop(context);
-      widget.viewModel.handleBarcode(context, barcode);
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AddProductScreen(
+            viewModel: AddProductViewmodel(
+              barcode: barcode,
+              localProductRepository: context.read(),
+              externalProductRepository: context.read(),
+            ),
+          ),
+        ),
+      );
     };
 
   @override

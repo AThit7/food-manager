@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:food_manager/ui/products/view_models/product_form_viewmodel.dart';
-import 'package:food_manager/ui/products/view_models/product_viewmodel.dart';
 import 'package:food_manager/ui/products/widgets/product_screen.dart';
 
 import '../view_models/all_products_viewmodel.dart';
 
+// TODO: re-fetch products after Navigator.pop()
 class AllProductsScreen extends StatelessWidget {
   const AllProductsScreen ({
     super.key,

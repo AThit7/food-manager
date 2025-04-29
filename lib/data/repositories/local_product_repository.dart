@@ -1,3 +1,7 @@
+import 'dart:developer';
+
+import 'package:food_manager/domain/validators/local_product_validator.dart';
+
 import '../../core/result/repo_result.dart';
 import '../../domain/models/product/local_product.dart';
 import '../../data/services/database/database_service.dart';
@@ -42,9 +46,24 @@ class LocalProductRepository{
 
   }
 
-  Future<void> insertProduct(LocalProduct product) async {
-    final productMap = _localProductToMap(product);
-    final unitsMap = Map.of(product.units);
+  // TODO: change to upsert
+  Future<RepoResult<int>> insertProduct(LocalProduct product) async {
+    try {
+      try {
+        ProductValidator.validate(product);
+      } catch (e, s) {
+        log(
+          'Attempted to insert invalid product',
+          name: 'LocalProductRepository',
+          error: e,
+          stackTrace: s,
+          level: 1200,
+        );
+        return RepoFailure('Attempted to insert invalid product: $e');
+
+      }
+      final productMap = _localProductToMap(product);
+      final unitsMap = Map.of(product.units);
 
       final batch = _db.batch();
       batch.insert(
@@ -52,19 +71,47 @@ class LocalProductRepository{
         productMap,
         conflictAlgorithm: DbConflictAlgorithm.replace,
       );
-      batch.insert(
-        UnitSchema.table,
-        unitsMap,
-        conflictAlgorithm: DbConflictAlgorithm.replace,
+      if (unitsMap.isNotEmpty) {
+        batch.insert(
+          UnitSchema.table,
+          unitsMap,
+          conflictAlgorithm: DbConflictAlgorithm.replace,
+        );
+      }
+      final results = await batch.commit();
+      if (results.isEmpty || results[0] is! int) {
+        return RepoFailure('Insert did not return expected ID');
+      }
+      return RepoSuccess(results[0] as int);
+    } catch (e, s) {
+      log(
+        'Unexpected error when inserting product',
+        name: 'LocalProductRepository',
+        error: e,
+        stackTrace: s,
+        level: 1200,
       );
-      batch.commit();
+      return RepoFailure('Unexpected exception when inserting product: $e');
+    }
   }
 
   Future<RepoResult<List<LocalProduct>>> listProducts() async {
-    final List<Map<String, Object?>> productMaps = await _db.query(
-        ProductSchema.table);
+    try {
+      final List<Map<String, Object?>> productMaps = await _db.query(
+          ProductSchema.table);
 
-    return RepoSuccess(productMaps.map(_localProductFromMap).toList());
+      return RepoSuccess(productMaps.map(_localProductFromMap).toList());
+    } catch (e, s) {
+      log(
+        'Unexpected error when fetching all products',
+        name: 'LocalProductRepository',
+        error: e,
+        stackTrace: s,
+        level: 1200,
+      );
+      return RepoFailure('Unexpected exception when fetching all products: $e');
+
+    }
   }
 
   Future<RepoResult<LocalProduct?>> getProduct(int id) async {

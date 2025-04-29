@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:json_view/json_view.dart';
 import 'package:provider/provider.dart';
 
 import '../view_models/add_product_viewmodel.dart';
@@ -22,78 +21,37 @@ class AddProductScreen extends StatelessWidget {
         listenable: viewModel,
         builder: (context, child) {
           if (!viewModel.loaded) {
+            viewModel.loadProductData();
             return const Center(child: CircularProgressIndicator());
           }
           else if (viewModel.product != null) {
+            // TODO: check if containerSize is set and add based on that,
+            //  probably new form needed
+            return const Text("TODO");
           }
           else if (viewModel.form != null) {
+            if (!viewModel.navigated) {
+              viewModel.navigated = true;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) =>
+                          ProductFormScreen(
+                            form: viewModel.form,
+                            viewModel: ProductFormViewmodel(
+                              localProductRepository: context.read(),
+                              externalProductRepository: context.read(),
+                            ),
+                          )
+                  ),
+                );
+              });
+            }
+            return const SizedBox();
           }
           return const Center(child: Text('Unexpected state'));
         },
-      ),
-    );
-  }
-
-  Widget _build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Product details')),
-      body: FutureBuilder(
-          future: viewModel.getProductDataOld(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
-              return Center(child: Column(
-                children: [
-                  Text('Something went wrong'),
-                  Text(snapshot.error.toString()),
-                ],
-              ));
-            }
-            if (snapshot.hasData) {
-              if (snapshot.data!.status != 'success') {
-                return Column(
-                  children: [
-                    Expanded(child: JsonView(json: snapshot.data!.toJson())),
-                    Expanded(
-                      child: Center(
-                        child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => ProductFormScreen (
-                                    product: null,
-                                    barcode: snapshot.data!.barcode,
-                                    viewModel: ProductFormViewmodel(
-                                      localProductRepository: context.read(),
-                                      externalProductRepository: context.read(),
-                                    ),
-                                  )
-                              ),
-                            );
-                          },
-                          child: const Text('Create item'),
-                        ),
-                      ),
-                    )
-                  ],
-                );
-              }
-              else {
-                return ProductFormScreen(
-                  product: snapshot.data!.product,
-                  barcode: snapshot.data!.barcode,
-                  viewModel: ProductFormViewmodel(
-                    localProductRepository: context.read(),
-                    externalProductRepository: context.read(),
-                  ),
-                );
-              }
-            }
-            return const Center(child: Text('Unexpected state'));
-          }
       ),
     );
   }
