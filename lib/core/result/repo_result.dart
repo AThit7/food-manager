@@ -9,3 +9,9 @@ class RepoFailure<T> extends RepoResult<T> {
   final String message;
   RepoFailure(this.message);
 }
+
+class RepoError<T> extends RepoResult<T> {
+  final String message;
+  final Object? exception;
+  RepoError(this.message, [this.exception]);
+}

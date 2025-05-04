@@ -12,9 +12,9 @@ import '../../../domain/validators/local_product_validator.dart';
 sealed class InsertResult {}
 
 class InsertSuccess extends InsertResult {
-  final int productId;
+  final LocalProduct product;
 
-  InsertSuccess(this.productId);
+  InsertSuccess(this.product);
 }
 
 class InsertRepoFailure extends InsertResult {}
@@ -61,7 +61,7 @@ class ProductFormViewmodel {
     final result = await _localProductRepository.insertProduct(product);
     switch (result) {
       case RepoSuccess():
-        return InsertSuccess(result.data);
+        return InsertSuccess(product.copyWith(id: result.data));
       case RepoFailure():
         return InsertRepoFailure();
     }

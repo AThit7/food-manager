@@ -446,7 +446,7 @@ class _AddProductFormState extends State<ProductFormScreen > {
 
                       switch (result) {
                         case InsertSuccess():
-                          Navigator.pop(context);
+                          Navigator.pop(context, result.product);
                         case InsertValidationFailure():
                           ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(content: Text("Failed to add product. "

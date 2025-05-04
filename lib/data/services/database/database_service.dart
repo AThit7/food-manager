@@ -10,6 +10,14 @@ abstract class DatabaseService {
     DbConflictAlgorithm? conflictAlgorithm,
   });
 
+  Future<int> update(
+    String table,
+    Map<String, Object?> values, {
+    String? where,
+    List<Object?>? whereArgs,
+    DbConflictAlgorithm? conflictAlgorithm,
+  });
+
   Future<List<Map<String, Object?>>> query(
     String table, {
     bool? distinct,
@@ -41,6 +49,14 @@ abstract class DbBatch {
     DbConflictAlgorithm? conflictAlgorithm,
   });
 
+  void update(
+    String table,
+    Map<String, Object?> values, {
+    String? where,
+    List<Object?>? whereArgs,
+    DbConflictAlgorithm? conflictAlgorithm,
+  });
+
   void query(
     String table, {
     bool? distinct,
@@ -54,10 +70,7 @@ abstract class DbBatch {
     int? offset,
   });
 
-  void rawQuery(
-    String sql, [
-    List<Object?>? arguments
-  ]);
+  void rawQuery(String sql, [List<Object?>? arguments]);
 
   void delete(String table, {String? where, List<Object?>? whereArgs});
 

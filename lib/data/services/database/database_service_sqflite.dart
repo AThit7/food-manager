@@ -1,3 +1,5 @@
+import 'dart:nativewrappers/_internal/vm/lib/developer.dart';
+
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
@@ -24,6 +26,29 @@ class DatabaseServiceSqflite implements DatabaseService {
       onCreate: _onCreate,
       version: 1,
     );
+
+    try {
+      final result = await _db.rawQuery('SELECT sqlite_version()');
+      if (result.isNotEmpty && result.first.values.isNotEmpty) {
+        final version = result.first.values.first;
+        log(
+          'Opened SQLite database. SQLite version: $version',
+          name: 'DatabaseService',
+        );
+      } else {
+        log(
+          'Opened SQLite database, but failed to retrieve SQLite version.',
+          name: 'DatabaseService',
+        );
+      }
+    } catch (e) {
+      log(
+        'Failed to query SQLite version',
+        name: 'DatabaseService',
+        error: e,
+        level: 1200,
+      );
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -41,6 +66,18 @@ class DatabaseServiceSqflite implements DatabaseService {
     DbConflictAlgorithm? conflictAlgorithm,
   }) {
     return _db.insert(table, values, nullColumnHack: nullColumnHack,
+        conflictAlgorithm: _conflictMap[conflictAlgorithm]);
+  }
+
+  @override
+  Future<int> update(
+    String table,
+    Map<String, Object?> values, {
+    String? where,
+    List<Object?>? whereArgs,
+    DbConflictAlgorithm? conflictAlgorithm,
+  }) {
+    return _db.update(table, values, where: where, whereArgs: whereArgs,
         conflictAlgorithm: _conflictMap[conflictAlgorithm]);
   }
 
@@ -84,7 +121,6 @@ class _DbBatchSqflite implements DbBatch{
 
   _DbBatchSqflite(this._batch);
 
-
   @override
   Future<List<Object?>> commit({
     bool? exclusive,
@@ -112,6 +148,18 @@ class _DbBatchSqflite implements DbBatch{
   }
 
   @override
+  void update(
+      String table,
+      Map<String, Object?> values, {
+        String? where,
+        List<Object?>? whereArgs,
+        DbConflictAlgorithm? conflictAlgorithm,
+      }) {
+    _batch.update(table, values, where: where, whereArgs: whereArgs,
+        conflictAlgorithm: _conflictMap[conflictAlgorithm]);
+  }
+
+  @override
   void query(
     String table, {
     bool? distinct,
@@ -124,7 +172,7 @@ class _DbBatchSqflite implements DbBatch{
     int? limit,
     int? offset,
   }) {
-    return _batch.query(table, columns:  columns, where: where,
+    _batch.query(table, columns:  columns, where: where,
         whereArgs: whereArgs, groupBy: groupBy, having: having,
         orderBy: orderBy, limit: limit, offset: offset);
   }
@@ -134,6 +182,6 @@ class _DbBatchSqflite implements DbBatch{
     String sql, [
     List<Object?>? arguments
   ]) {
-    return _batch.rawQuery(sql, arguments);
+    _batch.rawQuery(sql, arguments);
   }
 }
