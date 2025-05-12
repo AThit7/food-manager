@@ -220,7 +220,6 @@ class LocalProductRepository{
     );
   }
 
-  // TODO: optimize
   Future<RepoResult<List<LocalProduct>>> listProducts() async {
     const String unitNameColumn = 'unit_name';
     const String unitMultiplierColumn = 'unit_multiplier';

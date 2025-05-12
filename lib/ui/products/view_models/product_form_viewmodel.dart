@@ -58,12 +58,26 @@ class ProductFormViewmodel {
       return InsertValidationFailure();
     }
 
-    final result = await _localProductRepository.insertProduct(product);
-    switch (result) {
-      case RepoSuccess():
-        return InsertSuccess(product.copyWith(id: result.data));
-      case RepoFailure():
-        return InsertRepoFailure();
+    if (product.id == null) {
+      final result = await _localProductRepository.insertProduct(product);
+      switch (result) {
+        case RepoSuccess():
+          return InsertSuccess(product.copyWith(id: result.data));
+        case RepoFailure():
+          return InsertRepoFailure();
+        case RepoError():
+          return InsertRepoFailure();
+      }
+    } else {
+      final result = await _localProductRepository.updateProduct(product);
+      switch (result) {
+        case RepoSuccess():
+          return InsertSuccess(product);
+        case RepoFailure():
+          return InsertRepoFailure();
+        case RepoError():
+          return InsertRepoFailure();
+      }
     }
   }
 }

@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../view_models/product_form_viewmodel.dart';
 
-class ProductScreen extends StatelessWidget {
+class ProductScreen extends StatefulWidget {
   const ProductScreen ({
     super.key,
     required this.product,
@@ -15,31 +15,47 @@ class ProductScreen extends StatelessWidget {
   final LocalProduct product;
 
   @override
+  State<ProductScreen> createState() => _ProductScreenState();
+}
+
+class _ProductScreenState extends State<ProductScreen> {
+  late LocalProduct product;
+
+  @override
+  void initState() {
+    product = widget.product;
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          title: Text(product.name),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ProductFormScreen(
-                      form: ProductFormModel.fromLocalProduct(product),
-                      viewModel: ProductFormViewmodel(
-                        localProductRepository: context.read(),
-                        externalProductRepository: context.read(),
-                      ),
+      appBar: AppBar(
+        title: Text(product.name),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () async {
+              final updatedProduct = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ProductFormScreen(
+                    form: ProductFormModel.fromLocalProduct(product),
+                    viewModel: ProductFormViewmodel(
+                      localProductRepository: context.read(),
+                      externalProductRepository: context.read(),
                     ),
                   ),
-                );
-              },
-            ),
-          ],
-        ),
-        body: Text("TODO") //TODO: display product info
+                ),
+              );
+              if (updatedProduct != null) {
+                setState(() { product = updatedProduct; });
+              }
+            },
+          ),
+        ],
+      ),
+      body: Text("TODO"), //TODO: display product info
     );
   }
 }

@@ -19,14 +19,17 @@ class AddProductViewmodel extends ChangeNotifier {
   final String? barcode;
   LocalProduct? product;
   ProductFormModel? form;
+  String? errorMessage;
   bool loaded = false;
   bool navigated = false;
 
   Future<void> loadProductData() async {
     loaded = false;
+    product = null;
+    form = null;
+    errorMessage = null;
     log('Loading product data for barcode $barcode');
     if (barcode == null) {
-      product = null;
       form = ProductFormModel();
       loaded = true;
       notifyListeners();
@@ -40,18 +43,22 @@ class AddProductViewmodel extends ChangeNotifier {
         product = localResult.data;
         form = ProductFormModel.fromLocalProduct(product!);
       }
+      case RepoError(): {
+        errorMessage = localResult.toString();
+      }
       case RepoFailure(): {
         log('Querying remote API');
         final remoteResult = await _externalProductRepository.getProduct(
             barcode!);
         switch (remoteResult) {
           case RepoSuccess(): {
-            product = null;
             form = ProductFormModel.fromExternalProduct(remoteResult.data);
           }
           case RepoFailure(): {
-            product = null;
             form = ProductFormModel(barcode: barcode);
+          }
+          case RepoError(): {
+            errorMessage = remoteResult.toString();
           }
         }
       }

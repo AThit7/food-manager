@@ -5,7 +5,7 @@ import '../view_models/add_product_viewmodel.dart';
 import '../view_models/product_form_viewmodel.dart';
 import 'product_form_screen.dart';
 
-class AddProductScreen extends StatelessWidget {
+class AddProductScreen extends StatefulWidget {
   const AddProductScreen ({
     super.key,
     required this.viewModel,
@@ -14,7 +14,19 @@ class AddProductScreen extends StatelessWidget {
   final AddProductViewmodel viewModel;
 
   @override
+  State<AddProductScreen> createState() => _AddProductScreenState();
+}
+
+class _AddProductScreenState extends State<AddProductScreen> {
+  @override
+  void initState() {
+    widget.viewModel.loadProductData();
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final viewModel = widget.viewModel;
     return Scaffold(
       appBar: AppBar(title: const Text('Product details')),
       body: ListenableBuilder(
@@ -23,13 +35,23 @@ class AddProductScreen extends StatelessWidget {
           if (!viewModel.loaded) {
             viewModel.loadProductData();
             return const Center(child: CircularProgressIndicator());
-          }
-          else if (viewModel.product != null) {
+          } else if (viewModel.errorMessage != null) {
+            return Center(
+              child: Column(
+                children: [
+                  Text("Unexpected error."),
+                  IconButton(
+                    onPressed: viewModel.loadProductData,
+                    icon: Icon(Icons.refresh),
+                  ),
+                ],
+              ),
+            );
+          } else if (viewModel.product != null) {
             // TODO: check if containerSize is set and add based on that,
             //  probably new form needed
             return const Text("TODO");
-          }
-          else if (viewModel.form != null) {
+          } else if (viewModel.form != null) {
             if (!viewModel.navigated) {
               viewModel.navigated = true;
               WidgetsBinding.instance.addPostFrameCallback((_) {

@@ -3,8 +3,7 @@ import 'package:food_manager/ui/products/widgets/product_screen.dart';
 
 import '../view_models/all_products_viewmodel.dart';
 
-// TODO: re-fetch products after Navigator.pop()
-class AllProductsScreen extends StatelessWidget {
+class AllProductsScreen extends StatefulWidget {
   const AllProductsScreen ({
     super.key,
     required this.viewModel,
@@ -13,51 +12,62 @@ class AllProductsScreen extends StatelessWidget {
   final AllProductsViewmodel viewModel;
 
   @override
+  State<AllProductsScreen> createState() => _AllProductsScreenState();
+}
+
+class _AllProductsScreenState extends State<AllProductsScreen> {
+  @override
+  void initState() {
+    widget.viewModel.loadProducts();
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final viewModel = widget.viewModel;
     return Scaffold(
       appBar: AppBar(title: const Text('Product details')),
-      body: FutureBuilder(
-          future: viewModel.getProducts(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
-              return Center(child: Column(
-                children: [
-                  Text('Something went wrong'),
-                  Text(snapshot.error.toString()),
-                ],
-              ));
-            }
-            if (snapshot.hasData) {
-              if (snapshot.data!.isEmpty) {
-                return const Center(
-                    child: Text('Local product database is empty'));
-              }
-              return ListView(
-                children: [
-                  for (var product in snapshot.data!)
-                    Card(
-                      child: ListTile(
-                        title: Text(product.name),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ProductScreen(
-                                product: product,
-                              ),
+      body: ListenableBuilder(
+        listenable: viewModel,
+        builder: (context, child) {
+          if (viewModel.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (viewModel.errorMessage != null) {
+            return Center(child: Column(
+              children: [
+                Text('Something went wrong'),
+                IconButton(
+                  onPressed: viewModel.loadProducts,
+                  icon: Icon(Icons.refresh),
+                ),
+              ],
+            ));
+          } else if (viewModel.products.isEmpty) {
+            return const Center(
+                child: Text('Local product database is empty'));
+          } else {
+            return ListView(
+              children: [
+                for (var product in viewModel.products)
+                  Card(
+                    child: ListTile(
+                      title: Text(product.name),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ProductScreen(
+                              product: product,
                             ),
-                          );
-                        },
-                      ),
-                    )
-                ],
-              );
-            }
-            return const Center(child: Text('Unexpected state'));
+                          ),
+                        );
+                      },
+                    ),
+                  )
+              ],
+            );
           }
+        }
       ),
     );
   }

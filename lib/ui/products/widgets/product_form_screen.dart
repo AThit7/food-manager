@@ -121,6 +121,7 @@ class _AddProductFormState extends State<ProductFormScreen > {
                   labelText: 'Name',
                   hintText: "ex. Potatoes, [brand] ketchup",
                 ),
+                textCapitalization: TextCapitalization.sentences,
                 enabled: !isSubmitting,
                 initialValue: form.name,
                 onChanged: (String? value) => form.name = value,
@@ -439,7 +440,7 @@ class _AddProductFormState extends State<ProductFormScreen > {
                       form.units = unitsMap;
 
                       setState(() => isSubmitting = true);
-                      await Future.delayed(const Duration(seconds: 8));
+                      await Future.delayed(const Duration(seconds: 2));
                       final result = await widget.viewModel.saveProduct(
                           form.copyWith());
                       if (!context.mounted) return;
