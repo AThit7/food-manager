@@ -95,7 +95,7 @@ class _AddProductFormState extends State<ProductFormScreen > {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final amountFormatters = [
-      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+      FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d*$')),
     ];
 
     return Scaffold(
@@ -109,11 +109,23 @@ class _AddProductFormState extends State<ProductFormScreen > {
           child: ListView(
             children: [
               TextFormField(
+                keyboardType: TextInputType.numberWithOptions(
+                    decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*$')),
+                ],
                 decoration: const InputDecoration(labelText: 'Bar code'),
                 enabled: !isSubmitting,
                 initialValue: form.barcode,
-                onChanged: (String? value) {
-                  form.barcode = value;
+                onChanged: (String value) {
+                  form.barcode = value.isEmpty ? null : value;
+                },
+                validator: (String? value) {
+                  if (value != null && value.isNotEmpty
+                      && value.contains(RegExp(r'\D'))) {
+                    return 'Invalid barcode';
+                  }
+                  return null;
                 },
               ),
               TextFormField(
@@ -125,6 +137,16 @@ class _AddProductFormState extends State<ProductFormScreen > {
                 enabled: !isSubmitting,
                 initialValue: form.name,
                 onChanged: (String? value) => form.name = value,
+                validator: _stringFieldValidator,
+              ),
+              TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Tag',
+                  hintText: "ex. potatoes, ketchup, cheese",
+                ),
+                enabled: !isSubmitting,
+                initialValue: form.tag,
+                onChanged: (String? value) => form.tag = value,
                 validator: _stringFieldValidator,
               ),
               Row(

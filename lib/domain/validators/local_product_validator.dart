@@ -9,10 +9,12 @@ class ProductValidator{
 
   static void validate(LocalProduct product) {
     if (product.name.trim().isEmpty) throw ValidationError("Invalid name.");
+    if (product.tag.trim().isEmpty) throw ValidationError("Invalid tag.");
     if (product.referenceUnit.trim().isEmpty) {
       throw ValidationError("Invalid reference unit.");
     }
-    if (product.barcode != null && product.barcode!.trim().isEmpty) {
+    if (product.barcode != null && (product.barcode!.isEmpty ||
+        product.barcode!.contains(RegExp(r'\D')))) {
       throw ValidationError("Invalid barcode.");
     }
     if (product.containerSize != null &&
@@ -25,15 +27,20 @@ class ProductValidator{
     if (!_isValidDouble(product.calories, true)) {
       throw ValidationError("Invalid calories.");
     }
-    if (!_isValidDouble(product.carbs, true)) throw ValidationError("Invalid carbs.");
+    if (!_isValidDouble(product.carbs, true)) {
+      throw ValidationError("Invalid carbs.");
+    }
     if (!_isValidDouble(product.protein, true)) {
       throw ValidationError("Invalid protein.");
     }
-    if (!_isValidDouble(product.fat, true)) throw ValidationError("Invalid fat.");
+    if (!_isValidDouble(product.fat, true)) {
+      throw ValidationError("Invalid fat.");
+    }
     if (product.shelfLifeAfterOpening != null &&
         product.shelfLifeAfterOpening! >= 0) {
       throw ValidationError("Invalid shelf life after opening.");
     }
+
     product.units.forEach((key, value) {
       if (key.trim().isEmpty) throw ValidationError("Invalid barcode.");
       if (!_isValidDouble(value)) {

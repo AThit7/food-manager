@@ -8,10 +8,10 @@ class PantryItemValidator{
   }
 
   static void validate(PantryItem item) {
-    if (_isValidDouble(item.quantity)) {
+    if (!_isValidDouble(item.quantity)) {
       throw ValidationError("Invalid quantity.");
     }
-    if (item.product.id != null) {
+    if (item.product.id == null) {
       throw ValidationError("Linked product's ID can't be null.");
     }
   }

@@ -1,4 +1,4 @@
-enum DbConflictAlgorithm { replace }
+enum DbConflictAlgorithm { replace, ignore }
 
 abstract class DatabaseService {
   Future<void> init();

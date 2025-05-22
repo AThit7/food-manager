@@ -3,6 +3,7 @@ abstract class ProductSchema {
 
   static const id = 'id';
   static const name = 'name';
+  static const tag = 'tag';
   static const barcode = 'barcode';
   static const referenceUnit = 'reference_unit';
   static const referenceValue = 'reference_value';
@@ -18,6 +19,7 @@ abstract class ProductSchema {
       $id INTEGER PRIMARY KEY,
       $barcode TEXT CHECK (length(trim($barcode)) > 0),
       $name TEXT NOT NULL CHECK (length(trim($name)) > 0),
+      $tag TEXT NOT NULL CHECK (length(trim($name)) > 0),
       $referenceUnit TEXT NOT NULL CHECK (length(trim($referenceUnit)) > 0),
       $referenceValue REAL NOT NULL CHECK ($referenceValue > 0),
       $containerSize REAL CHECK ($containerSize > 0),

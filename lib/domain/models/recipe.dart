@@ -1,15 +1,27 @@
-import 'package:food_manager/domain/models/product/local_product.dart';
+import 'recipe_ingredient.dart';
 
-class LocalRecipe {
+class Recipe {
   final int? id;
   final String name;
-  final List<Map<String, LocalProduct>>? ingredients;
+  final List<RecipeIngredient> ingredients;
+  final int preparationTime;
   final String? instructions;
 
-  LocalRecipe({
+  Recipe({
     required this.name,
-    this.ingredients,
+    required this.ingredients,
+    required this.preparationTime,
     this.instructions,
     this.id,
   });
+
+  Recipe copyWith({int? id}) {
+    return Recipe(
+      id: id ?? this.id,
+      name: name,
+      ingredients: ingredients,
+      preparationTime: preparationTime,
+      instructions: instructions,
+    );
+  }
 }

@@ -8,7 +8,8 @@ import '../../database/schema/product_schema.dart';
 import '../../database/schema/unit_schema.dart';
 
 final Map<DbConflictAlgorithm, ConflictAlgorithm> _conflictMap = const {
-  DbConflictAlgorithm.replace: ConflictAlgorithm.replace
+  DbConflictAlgorithm.replace: ConflictAlgorithm.replace,
+  DbConflictAlgorithm.ignore: ConflictAlgorithm.ignore
 };
 
 class DatabaseServiceSqflite implements DatabaseService {

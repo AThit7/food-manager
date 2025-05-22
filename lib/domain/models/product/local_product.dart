@@ -1,6 +1,6 @@
 class LocalProduct {
   final int? id, shelfLifeAfterOpening;
-  final String name, referenceUnit;
+  final String name, referenceUnit, tag;
   final String? barcode;
   final Map<String, double> units;
   final double referenceValue, calories, carbs, protein, fat;
@@ -8,6 +8,7 @@ class LocalProduct {
 
   const LocalProduct({
     required this.name,
+    required this.tag,
     required this.units,
     required this.referenceUnit,
     required this.referenceValue,
@@ -25,6 +26,7 @@ class LocalProduct {
     return LocalProduct(
       id: id ?? this.id,
       name: name,
+      tag: tag,
       units: units,
       referenceUnit: referenceUnit,
       referenceValue: referenceValue,

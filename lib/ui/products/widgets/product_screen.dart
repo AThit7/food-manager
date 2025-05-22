@@ -43,7 +43,6 @@ class _ProductScreenState extends State<ProductScreen> {
                     form: ProductFormModel.fromLocalProduct(product),
                     viewModel: ProductFormViewmodel(
                       localProductRepository: context.read(),
-                      externalProductRepository: context.read(),
                     ),
                   ),
                 ),

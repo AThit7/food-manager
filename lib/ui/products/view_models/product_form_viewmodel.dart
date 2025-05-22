@@ -6,7 +6,6 @@ import 'package:food_manager/core/result/repo_result.dart';
 import '../../../data/repositories/local_product_repository.dart';
 import '../../../domain/models/product/local_product.dart';
 import '../models/product_form_model.dart';
-import '../../../data/repositories/external_product_repository.dart';
 import '../../../domain/validators/local_product_validator.dart';
 
 sealed class InsertResult {}
@@ -24,7 +23,6 @@ class InsertValidationFailure extends InsertResult {}
 class ProductFormViewmodel {
   ProductFormViewmodel({
     required LocalProductRepository localProductRepository,
-    required ExternalProductRepository externalProductRepository,
   }) : _localProductRepository = localProductRepository;
 
   final LocalProductRepository _localProductRepository;
@@ -35,6 +33,7 @@ class ProductFormViewmodel {
       product = LocalProduct(
         id: form.id,
         name: form.name!,
+        tag: form.tag!,
         barcode: form.barcode,
         units: Map.of(form.units!),
         referenceUnit: form.referenceUnit!,
@@ -52,7 +51,7 @@ class ProductFormViewmodel {
     } catch (e) {
       log(
         "Failed to validate product.",
-        name: "saveProduct",
+        name: "ProductFormViewmodel",
         error: e,
       );
       return InsertValidationFailure();

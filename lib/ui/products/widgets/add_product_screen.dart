@@ -63,7 +63,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
                             form: viewModel.form,
                             viewModel: ProductFormViewmodel(
                               localProductRepository: context.read(),
-                              externalProductRepository: context.read(),
                             ),
                           )
                   ),
