@@ -95,8 +95,7 @@ class RecipeRepository{
       final batch = _db.batch();
       batch.insert(RecipeSchema.table, recipeMap);
       for (final ingredientTagMap in ingredientsTagsMaps) {
-        batch.insert(TagSchema.table, ingredientTagMap.tag,
-            conflictAlgorithm: DbConflictAlgorithm.ignore);
+        batch.insert(TagSchema.table, ingredientTagMap.tag, conflictAlgorithm: DbConflictAlgorithm.ignore);
         batch.insert(RecipeIngredientSchema.table, ingredientTagMap.ingredient);
       }
       final results = await batch.commit();
@@ -145,8 +144,7 @@ class RecipeRepository{
           whereArgs: [recipe.id]
       );
       for (final ingredientTagMap in ingredientsTagsMaps) {
-        batch.insert(TagSchema.table, ingredientTagMap.tag,
-            conflictAlgorithm: DbConflictAlgorithm.ignore);
+        batch.insert(TagSchema.table, ingredientTagMap.tag, conflictAlgorithm: DbConflictAlgorithm.ignore);
         batch.insert(RecipeIngredientSchema.table, ingredientTagMap.ingredient);
       }
       final results = await batch.commit();
@@ -171,8 +169,7 @@ class RecipeRepository{
     }
 
     throw StateError(
-      'Unexpected update count: $count for id ${recipe.id}. '
-          'Expected 0 or 1. Data may be corrupted.',
+      'Unexpected update count: $count for id ${recipe.id}. Expected 0 or 1. Data may be corrupted.',
     );
   }
 
@@ -226,11 +223,9 @@ class RecipeRepository{
           $tagTable.${TagSchema.name} AS $tagNameColumn
         FROM ${RecipeSchema.table} $recipeTable
         INNER JOIN ${RecipeIngredientSchema.table} $ingredientTable
-          ON $recipeTable.${RecipeSchema.id} =
-             $ingredientTable.${RecipeIngredientSchema.recipeId}
+          ON $recipeTable.${RecipeSchema.id} = $ingredientTable.${RecipeIngredientSchema.recipeId}
         INNER JOIN ${TagSchema.table} $tagTable
-          ON $ingredientTable.${RecipeIngredientSchema.tagId} =
-             $tagTable.${TagSchema.id}
+          ON $ingredientTable.${RecipeIngredientSchema.tagId} = $tagTable.${TagSchema.id}
       ''');
 
       final recipesMap = <int, Recipe>{};

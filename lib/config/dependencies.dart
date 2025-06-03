@@ -1,3 +1,6 @@
+import 'package:food_manager/data/repositories/pantry_item_repository.dart';
+import 'package:food_manager/data/repositories/recipe_repository.dart';
+import 'package:food_manager/data/repositories/tag_repository.dart';
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
 
@@ -18,6 +21,9 @@ Future<List<SingleChildWidget>> initProviders() async {
   return [
     Provider.value(value: sharedPreferencesService),
     Provider.value(value: databaseService),
+    Provider(create: (context) => TagRepository(databaseService)),
+    Provider(create: (context) => PantryItemRepository(databaseService)),
+    Provider(create: (context) => RecipeRepository(databaseService)),
     Provider(create: (context) => LocalProductRepository(databaseService)),
     Provider(create: (context) =>
         ExternalProductRepository(productInfoService)),

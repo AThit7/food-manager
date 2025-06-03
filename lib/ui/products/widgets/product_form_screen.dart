@@ -462,7 +462,6 @@ class _AddProductFormState extends State<ProductFormScreen > {
                       form.units = unitsMap;
 
                       setState(() => isSubmitting = true);
-                      await Future.delayed(const Duration(seconds: 2));
                       final result = await widget.viewModel.saveProduct(
                           form.copyWith());
                       if (!context.mounted) return;

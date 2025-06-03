@@ -18,8 +18,8 @@ class AllProductsScreen extends StatefulWidget {
 class _AllProductsScreenState extends State<AllProductsScreen> {
   @override
   void initState() {
-    widget.viewModel.loadProducts();
     super.initState();
+    widget.viewModel.loadProducts();
   }
 
   @override

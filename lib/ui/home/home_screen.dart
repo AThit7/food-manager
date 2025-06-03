@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:food_manager/ui/recipes/view_models/recipe_form_viewmodel.dart';
+import 'package:food_manager/ui/recipes/widgets/recipe_form_screen.dart';
 import 'package:provider/provider.dart';
 
 import '../scanner/widgets/scanner_screen.dart';
@@ -38,6 +40,23 @@ class HomeScreen extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                       builder: (context) {
+                        final viewModel = RecipeFormViewmodel(
+                          recipeRepository: context.read(),
+                          tagRepository: context.read(),
+                        );
+                        return RecipeFormScreen(viewModel: viewModel);
+                      }
+                  ),
+                );
+              },
+              child: const Text('Add recipe'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) {
                         final viewModel = AllProductsViewmodel(
                             localProductRepository: context.read()
                         );
@@ -47,6 +66,22 @@ class HomeScreen extends StatelessWidget {
                 );
               },
               child: const Text('All products'),
+            ),
+            ElevatedButton(
+              onPressed: true ? null : () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) {
+                        final viewModel = AllProductsViewmodel(
+                            localProductRepository: context.read()
+                        );
+                        return AllProductsScreen(viewModel: viewModel);
+                      }
+                  ),
+                );
+              },
+              child: const Text('All recipes'),
             ),
           ],
         ),

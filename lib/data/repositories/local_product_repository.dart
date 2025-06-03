@@ -75,17 +75,14 @@ class LocalProductRepository{
       tag: productMap[ProductSchema.tag] as String,
       barcode: productMap[ProductSchema.barcode] as String?,
       referenceUnit: productMap[ProductSchema.referenceUnit] as String,
-      referenceValue:
-        (productMap[ProductSchema.referenceValue] as num).toDouble(),
+      referenceValue: (productMap[ProductSchema.referenceValue] as num).toDouble(),
       units: {},
-      containerSize:
-        (productMap[ProductSchema.containerSize] as num?)?.toDouble(),
+      containerSize: (productMap[ProductSchema.containerSize] as num?)?.toDouble(),
       calories: (productMap[ProductSchema.calories] as num).toDouble(),
       carbs: (productMap[ProductSchema.carbs] as num).toDouble(),
       protein: (productMap[ProductSchema.protein] as num).toDouble(),
       fat: (productMap[ProductSchema.fat] as num).toDouble(),
-      shelfLifeAfterOpening:
-        productMap[ProductSchema.shelfLifeAfterOpening] as int?,
+      shelfLifeAfterOpening: productMap[ProductSchema.shelfLifeAfterOpening] as int?,
     );
   }
 
@@ -202,9 +199,7 @@ class LocalProductRepository{
       return RepoSuccess(null);
     }
 
-    throw StateError(
-      'Unexpected delete count: $count for id $productId. '
-          'Expected 0 or 1. Data may be corrupted.',
+    throw StateError('Unexpected delete count: $count for id $productId. Expected 0 or 1. Data may be corrupted.',
     );
   }
 

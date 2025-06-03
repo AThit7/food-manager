@@ -12,8 +12,8 @@ abstract class PantryItemSchema {
     CREATE TABLE $table (
       $id INTEGER PRIMARY KEY,
       $productId INTEGER NOT NULL,
-      $quantity REAL NOT NULL CHECK ($quantity >= 0).
-      $expirationDate INTEGER NOT NULL CHECK ($expirationDate > 0), -- Unix time
+      $quantity REAL NOT NULL CHECK ($quantity >= 0),
+      $expirationDate INTEGER NOT NULL CHECK ($expirationDate > 0), -- in Unix time
       
       FOREIGN KEY ($productId)
         REFERENCES ${ProductSchema.table}(${ProductSchema.id})

@@ -1,5 +1,9 @@
 import 'dart:developer';
 
+import 'package:food_manager/data/database/schema/pantry_item_schema.dart';
+import 'package:food_manager/data/database/schema/recipe_ingredient_schema.dart';
+import 'package:food_manager/data/database/schema/recipe_schema.dart';
+import 'package:food_manager/data/database/schema/tag_schema.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
@@ -54,8 +58,12 @@ class DatabaseServiceSqflite implements DatabaseService {
 
   Future<void> _onCreate(Database db, int version) async {
     final batch = db.batch();
+    batch.execute(TagSchema.create);
     batch.execute(ProductSchema.create);
+    batch.execute(RecipeSchema.create);
     batch.execute(UnitSchema.create);
+    batch.execute(PantryItemSchema.create);
+    batch.execute(RecipeIngredientSchema.create);
     await batch.commit();
   }
 
@@ -95,8 +103,7 @@ class DatabaseServiceSqflite implements DatabaseService {
     int? limit,
     int? offset,
   }) {
-    return _db.query(table, columns:  columns, where: where,
-        whereArgs: whereArgs, groupBy: groupBy, having: having,
+    return _db.query(table, columns:  columns, where: where, whereArgs: whereArgs, groupBy: groupBy, having: having,
         orderBy: orderBy, limit: limit, offset: offset);
   }
 
@@ -128,8 +135,7 @@ class _DbBatchSqflite implements DbBatch{
     bool? noResult,
     bool? continueOnError
   }) {
-    return _batch.commit(exclusive: exclusive, noResult: noResult,
-        continueOnError: continueOnError);
+    return _batch.commit(exclusive: exclusive, noResult: noResult, continueOnError: continueOnError);
   }
 
   @override
@@ -144,8 +150,7 @@ class _DbBatchSqflite implements DbBatch{
     String? nullColumnHack,
     DbConflictAlgorithm? conflictAlgorithm,
   }) {
-    _batch.insert(table, values, nullColumnHack: nullColumnHack,
-        conflictAlgorithm: _conflictMap[conflictAlgorithm]);
+    _batch.insert(table, values, nullColumnHack: nullColumnHack, conflictAlgorithm: _conflictMap[conflictAlgorithm]);
   }
 
   @override
@@ -173,8 +178,7 @@ class _DbBatchSqflite implements DbBatch{
     int? limit,
     int? offset,
   }) {
-    _batch.query(table, columns:  columns, where: where,
-        whereArgs: whereArgs, groupBy: groupBy, having: having,
+    _batch.query(table, columns:  columns, where: where, whereArgs: whereArgs, groupBy: groupBy, having: having,
         orderBy: orderBy, limit: limit, offset: offset);
   }
 
