@@ -81,11 +81,11 @@ class TagRepository{
       final rows = await _db.rawQuery('''
         SELECT 
           $tagTable.*,
-          $unitTable.${UnitSchema.name} AS $unitNameColumn,
+          $unitTable.${UnitSchema.name} AS $unitNameColumn
         FROM ${TagSchema.table} $tagTable
         LEFT OUTER JOIN ${ProductSchema.table} $productTable
           ON $tagTable.${TagSchema.id} = $productTable.${ProductSchema.tagId}
-        LEFT OUTER JOIN ${TagSchema.table} $unitTable
+        LEFT OUTER JOIN ${UnitSchema.table} $unitTable
           ON $productTable.${ProductSchema.id} = $unitTable.${UnitSchema.productId}
       ''');
 

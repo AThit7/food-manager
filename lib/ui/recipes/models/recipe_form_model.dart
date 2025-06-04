@@ -8,7 +8,6 @@ class RecipeFormModel {
   List<IngredientData>? ingredients;
   String? instructions;
   String? preparationTime;
-  Map<String, double>? products;
 
   RecipeFormModel({this.id});
 

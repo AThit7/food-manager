@@ -10,8 +10,7 @@ class AllProductsViewmodel extends ChangeNotifier {
   AllProductsViewmodel ({
     required LocalProductRepository localProductRepository,
   }) : _localProductRepository = localProductRepository {
-    _subscription =
-        _localProductRepository.productUpdates.listen(_onProductEvent);
+    _subscription = _localProductRepository.productUpdates.listen(_onProductEvent);
   }
 
   final LocalProductRepository _localProductRepository;

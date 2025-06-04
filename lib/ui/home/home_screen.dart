@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:food_manager/ui/recipes/view_models/all_recipes_viewmodel.dart';
 import 'package:food_manager/ui/recipes/view_models/recipe_form_viewmodel.dart';
+import 'package:food_manager/ui/recipes/widgets/all_recipes_screen.dart';
 import 'package:food_manager/ui/recipes/widgets/recipe_form_screen.dart';
 import 'package:provider/provider.dart';
 
@@ -24,9 +26,7 @@ class HomeScreen extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                       builder: (context) {
-                        final viewModel = ScannerViewModel(
-                            localProductRepository: context.read(),
-                        );
+                        final viewModel = ScannerViewModel(localProductRepository: context.read());
                         return ScannerScreen(viewModel: viewModel);
                       }
                   ),
@@ -57,9 +57,7 @@ class HomeScreen extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                       builder: (context) {
-                        final viewModel = AllProductsViewmodel(
-                            localProductRepository: context.read()
-                        );
+                        final viewModel = AllProductsViewmodel(localProductRepository: context.read());
                         return AllProductsScreen(viewModel: viewModel);
                       }
                   ),
@@ -68,15 +66,13 @@ class HomeScreen extends StatelessWidget {
               child: const Text('All products'),
             ),
             ElevatedButton(
-              onPressed: true ? null : () {
+              onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
                       builder: (context) {
-                        final viewModel = AllProductsViewmodel(
-                            localProductRepository: context.read()
-                        );
-                        return AllProductsScreen(viewModel: viewModel);
+                        final viewModel = AllRecipesViewmodel(recipeRepository: context.read());
+                        return AllRecipesScreen(viewModel: viewModel);
                       }
                   ),
                 );

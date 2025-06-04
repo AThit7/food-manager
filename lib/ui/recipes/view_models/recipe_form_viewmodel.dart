@@ -4,6 +4,7 @@ import 'dart:developer';
 import 'package:flutter/cupertino.dart';
 import 'package:food_manager/core/result/repo_result.dart';
 import 'package:food_manager/data/repositories/tag_repository.dart';
+import 'package:food_manager/domain/models/recipe_ingredient.dart';
 import 'package:food_manager/domain/models/tag.dart';
 import 'package:fuzzy/fuzzy.dart';
 
@@ -35,8 +36,9 @@ class RecipeFormViewmodel extends ChangeNotifier {
   final RecipeRepository _recipeRepository;
   final TagRepository _tagRepository;
   bool _isLoadingTags = false;
-  Map<String, List<String>> _tagUnitsMap = {};
   String? _errorMessage;
+
+  Map<String, ({int id, List<String> units})> _tagUnitsMap = {};
   Fuzzy<String> _tagsFuse = Fuzzy<String>([]);
   Map<String, Fuzzy<String>> _unitFuseMap = {};
 
@@ -44,18 +46,51 @@ class RecipeFormViewmodel extends ChangeNotifier {
   get isLoadingTags => _isLoadingTags;
   get errorMessage => _errorMessage;
 
-  List<String> getUnits(String tag) => List.unmodifiable(_tagUnitsMap[tag] ?? []); // TODO: maybe null instead of empty
+  List<String> getUnits(String tag) => List.unmodifiable(_tagUnitsMap[tag]?.units ?? []); // TODO: maybe null instead of empty
 
-  bool tagExists(String name) {
-    return _tagUnitsMap.containsKey(name);
+  Iterable<String> tagSearch(String tag) {
+    return _tagsFuse.search(tag).map((e) => e.item);
+  }
+
+  Iterable<String> unitSearch(String unit, String tag) {
+    return _unitFuseMap[tag]?.search(tag).map((e) => e.item) ?? Iterable<String>.empty();
+  }
+
+  String? getTagUnitStatus(String tag, String unit) {
+    if (!_unitFuseMap.containsKey(tag)) return 'Tag not found in the database.';
+    final unitMatch = _unitFuseMap[tag]!.search(unit, 1).firstOrNull;
+    if (unitMatch?.item != unit) return 'No such unit exists for this tag.';
+    return null;
   }
 
   Future<InsertResult> saveRecipe(RecipeFormModel form) async {
-    return InsertRepoFailure();
-    /*
     Recipe recipe;
     try {
-      recipe = Recipe(...);
+      if (form.name == null || form.ingredients == null || form.preparationTime == null) {
+        throw ArgumentError("Required form fields were null.");
+      }
+
+      final recipeIngredients = <RecipeIngredient>[];
+      for (final ingredientData in form.ingredients!) {
+        if (ingredientData.tag == null || ingredientData.unit == null || ingredientData.amount == null) {
+          throw ArgumentError("Required form ingredient fields were null.");
+        }
+        recipeIngredients.add(RecipeIngredient(
+          tag: Tag(name: ingredientData.tag!, id: _tagUnitsMap[ingredientData.tag]?.id),
+          unit: ingredientData.unit!,
+          amount: double.parse(ingredientData.amount!),
+        ));
+
+      }
+
+      recipe = Recipe(
+        id: form.id,
+        name: form.name!,
+        ingredients: recipeIngredients,
+        preparationTime: int.parse(form.preparationTime!),
+        instructions: form.instructions,
+      );
+
       RecipeValidator.validate(recipe);
     } catch (e) {
       log(
@@ -87,7 +122,6 @@ class RecipeFormViewmodel extends ChangeNotifier {
           return InsertRepoFailure();
       }
     }
-     */
   }
 
   Future<void> loadTagsAndUnits() async {
@@ -98,8 +132,8 @@ class RecipeFormViewmodel extends ChangeNotifier {
 
     switch (result) {
       case RepoSuccess():
-        _tagUnitsMap =
-            Map<String, List<String>>.fromEntries(result.data.entries.map((e) => MapEntry(e.key.name, e.value)));
+        _tagUnitsMap = Map<String, ({int id, List<String> units})>.fromEntries(
+            result.data.entries.map((e) => MapEntry(e.key.name, (id: e.key.id!, units: e.value))));
       case RepoError():
         _errorMessage = result.message;
       case RepoFailure():
@@ -108,7 +142,7 @@ class RecipeFormViewmodel extends ChangeNotifier {
 
     _tagsFuse = Fuzzy(_tagUnitsMap.keys.toList());
     _unitFuseMap =
-        Map<String, Fuzzy<String>>.fromEntries(_tagUnitsMap.entries.map((e) => MapEntry(e.key, Fuzzy(e.value))));
+        Map<String, Fuzzy<String>>.fromEntries(_tagUnitsMap.entries.map((e) => MapEntry(e.key, Fuzzy(e.value.units))));
 
     _isLoadingTags = false;
     notifyListeners();
@@ -204,6 +238,9 @@ class RecipeFormViewmodel extends ChangeNotifier {
         }
       }
     }
+
+    bestTag ??= words.sublist(1).join(' ');
+    bestUnit ??= words.sublist(0, 1).join(' ');
 
     return IngredientData(amount: parsedAmountString, tag: bestTag, unit: bestUnit);
   }
