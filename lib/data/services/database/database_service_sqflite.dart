@@ -122,9 +122,19 @@ class DatabaseServiceSqflite implements DatabaseService {
 
   @override
   DbBatch batch() => _DbBatchSqflite(_db.batch());
+
+  @override
+  Future<T> transaction<T>(Future<T> Function(DbTransaction txn) action, {bool? exclusive}) {
+    return _db.transaction<T>((txn) {
+        final wrappedTxn = _DbTransactionSqflite(txn);
+        return action(wrappedTxn);
+      },
+      exclusive: exclusive,
+    );
+  }
 }
 
-class _DbBatchSqflite implements DbBatch{
+class _DbBatchSqflite implements DbBatch {
   final Batch _batch;
 
   _DbBatchSqflite(this._batch);
@@ -189,4 +199,66 @@ class _DbBatchSqflite implements DbBatch{
   ]) {
     _batch.rawQuery(sql, arguments);
   }
+}
+
+class _DbTransactionSqflite implements DbTransaction {
+  final Transaction _txn;
+
+  _DbTransactionSqflite(this._txn);
+
+  @override
+  Future<int> insert(
+      String table,
+      Map<String, Object?> values, {
+        String? nullColumnHack,
+        DbConflictAlgorithm? conflictAlgorithm,
+      }) {
+    return _txn.insert(table, values, nullColumnHack: nullColumnHack,
+        conflictAlgorithm: _conflictMap[conflictAlgorithm]);
+  }
+
+  @override
+  Future<int> update(
+      String table,
+      Map<String, Object?> values, {
+        String? where,
+        List<Object?>? whereArgs,
+        DbConflictAlgorithm? conflictAlgorithm,
+      }) {
+    return _txn.update(table, values, where: where, whereArgs: whereArgs,
+        conflictAlgorithm: _conflictMap[conflictAlgorithm]);
+  }
+
+  @override
+  Future<List<Map<String, Object?>>> query(
+      String table, {
+        bool? distinct,
+        List<String>? columns,
+        String? where,
+        List<Object?>? whereArgs,
+        String? groupBy,
+        String? having,
+        String? orderBy,
+        int? limit,
+        int? offset,
+      }) {
+    return _txn.query(table, columns:  columns, where: where, whereArgs: whereArgs, groupBy: groupBy, having: having,
+        orderBy: orderBy, limit: limit, offset: offset);
+  }
+
+  @override
+  Future<List<Map<String, Object?>>> rawQuery(
+      String sql, [
+        List<Object?>? arguments
+      ]) {
+    return _txn.rawQuery(sql, arguments);
+  }
+
+  @override
+  Future<int> delete(String table, {String? where, List<Object?>? whereArgs}) {
+    return _txn.delete(table, where: where, whereArgs: whereArgs);
+  }
+
+  @override
+  DbBatch batch() => _DbBatchSqflite(_txn.batch());
 }

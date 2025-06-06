@@ -67,7 +67,7 @@ class RecipeFormViewmodel extends ChangeNotifier {
     Recipe recipe;
     try {
       if (form.name == null || form.ingredients == null || form.preparationTime == null) {
-        throw ArgumentError("Required form fields were null.");
+        throw ArgumentError("Required form fields were null. Form: ${form.name} ${form.ingredients?.isEmpty.toString()} ${form.preparationTime}");
       }
 
       final recipeIngredients = <RecipeIngredient>[];

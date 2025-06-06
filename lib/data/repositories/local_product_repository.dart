@@ -105,8 +105,10 @@ class LocalProductRepository{
       if (results.isEmpty || results[0] is! int) {
         return RepoError('Insert did not return expected ID.');
       }
-      _productUpdates.add(ProductAdded(product));
-      return RepoSuccess(results[0] as int);
+
+      final productId = results[0] as int;
+      _productUpdates.add(ProductAdded(product.copyWith(id: productId)));
+      return RepoSuccess(productId);
     } catch (e, s) {
       log(
         'Unexpected error when inserting product.',

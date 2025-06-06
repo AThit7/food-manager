@@ -21,7 +21,7 @@ abstract class RecipeIngredientSchema {
         ON DELETE CASCADE,
       FOREIGN KEY($tagId)
         REFERENCES ${TagSchema.table}(${TagSchema.id})
-        ON DELETE CASCADE,
+        ON DELETE RESTRICT,
       PRIMARY KEY ($recipeId, $tagId)
     )
   ''';

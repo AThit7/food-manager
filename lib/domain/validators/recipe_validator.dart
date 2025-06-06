@@ -1,4 +1,5 @@
 import 'package:food_manager/domain/models/recipe.dart';
+import 'package:food_manager/domain/validators/recipe_ingredient_validator.dart';
 import '../../core/exceptions/exceptions.dart';
 
 class RecipeValidator{
@@ -7,11 +8,14 @@ class RecipeValidator{
         (canBeZero || value > 0);
   }
 
-  // TODO finish
+  // TODO validate instruction?
   static void validate(Recipe recipe) {
-    throw ValidationError("Not implemented.");
-    if (recipe.name.isEmpty) {
-      throw ValidationError("Name can't be empty");
+    if (recipe.name.trim().isEmpty) throw ValidationError("Name can't be empty");
+    if  (!recipe.preparationTime.isFinite || recipe.preparationTime.isNegative) {
+      throw ValidationError("Invalid preparation time.");
+    }
+    for (final recipeIngredient in recipe.ingredients) {
+      RecipeIngredientValidator.validate(recipeIngredient);
     }
   }
 

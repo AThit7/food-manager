@@ -6,8 +6,7 @@ import '../view_models/recipe_form_viewmodel.dart';
 import '../models/recipe_form_model.dart';
 
 bool _isValidAmountRaw(double? value, [bool canBeZero = false]) =>
-    value != null && value.isFinite && !value.isNegative &&
-        (canBeZero || value > 0);
+    value != null && value.isFinite && !value.isNegative && (canBeZero || value > 0);
 
 bool _isValidAmount(String? amount, [bool canBeZero = false]) {
   final value = double.tryParse(amount ?? "");
@@ -113,6 +112,11 @@ class _RecipeFormState extends State<RecipeFormScreen> {
     super.initState();
     if (widget.form != null) {
       form = widget.form!.copyWith();
+      if (form.ingredients != null) {
+        ingredients.addAll(
+          form.ingredients!.map((e) => _Ingredient.fromIngredientData(e, widget.viewModel.getTagUnitStatus)),
+        );
+      }
     } else {
       form = RecipeFormModel();
     }
@@ -325,21 +329,21 @@ class _RecipeFormState extends State<RecipeFormScreen> {
                     style: theme.textTheme.bodyLarge,
                     children: [
                       TextSpan(
-                        text: '${ingredient.amount} ',
+                        text: ingredient.amount.isEmpty ? null : '${ingredient.amount} ',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Colors.black87,
                         ),
                       ),
                       TextSpan(
-                        text: '${ingredient.unit} ',
+                        text: ingredient.unit.isEmpty ? null : '${ingredient.unit} ',
                         style: const TextStyle(
                           fontWeight: FontWeight.w500,
                           color: Colors.blueGrey,
                         ),
                       ),
                       TextSpan(
-                        text: ingredient.tag,
+                        text: ingredient.tag.isEmpty ? null : ingredient.tag,
                         style: const TextStyle(
                           fontWeight: FontWeight.normal,
                           color: Colors.black,
@@ -445,8 +449,8 @@ class _RecipeFormState extends State<RecipeFormScreen> {
                 keyboardType: TextInputType.number,
                 textCapitalization: TextCapitalization.sentences,
                 enabled: !isSubmitting,
-                initialValue: form.name,
-                onChanged: (String? value) => form.name = value,
+                initialValue: form.preparationTime,
+                onChanged: (String? value) => form.preparationTime = value,
                 validator: (String? value) => _isValidAmount(value, true) ? null : "Enter a valid time",
               ),
               SizedBox(height: 8),

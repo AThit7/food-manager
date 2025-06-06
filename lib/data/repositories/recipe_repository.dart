@@ -50,8 +50,7 @@ class RecipeRepository{
     };
   }
 
-  List<({Map<String, dynamic> ingredient, Map<String, dynamic> tag})>
-  _recipeToIngredientsTagsMaps(Recipe recipe) {
+  List<({Map<String, dynamic> ingredient, Map<String, dynamic> tag})> _recipeToIngredientsTagsMaps(Recipe recipe) {
     final List<({Map<String, dynamic> ingredient,
     Map<String, dynamic> tag})> results = [];
 
@@ -92,20 +91,40 @@ class RecipeRepository{
       final recipeMap = _recipeToMap(recipe);
       final ingredientsTagsMaps = _recipeToIngredientsTagsMaps(recipe);
 
-      final batch = _db.batch();
-      batch.insert(RecipeSchema.table, recipeMap);
-      for (final ingredientTagMap in ingredientsTagsMaps) {
-        batch.insert(TagSchema.table, ingredientTagMap.tag, conflictAlgorithm: DbConflictAlgorithm.ignore);
-        batch.insert(RecipeIngredientSchema.table, ingredientTagMap.ingredient);
-      }
-      final results = await batch.commit();
+      int recipeId = await _db.transaction((txn) async {
+        final id = await txn.insert(RecipeSchema.table, recipeMap);
+        final batch = txn.batch();
 
-      if (results.isEmpty || results[0] is! int) {
-        // Should never happen for this conflict algorithm
-        throw StateError('Unexpected insert result: $results.');
-      }
-      _recipeUpdates.add(RecipeAdded(recipe));
-      return RepoSuccess(results[0] as int);
+        for (final ingredientTagMap in ingredientsTagsMaps) {
+          int tagId;
+          final tagResults = await txn.query(
+            TagSchema.table,
+            columns: [TagSchema.id],
+            where: '${TagSchema.name} = ?',
+            whereArgs: [ingredientTagMap.tag[TagSchema.name]],
+            limit: 1,
+          );
+          if (tagResults.isEmpty) {
+            try {
+              tagId = await txn.insert(TagSchema.table, ingredientTagMap.tag);
+            } catch (e) {
+              throw StateError("Tag doesn't exist, but can't be inserted."); // should never happen
+            }
+          } else {
+            tagId = tagResults.first[TagSchema.id] as int;
+          }
+
+          ingredientTagMap.ingredient[RecipeIngredientSchema.recipeId] = id;
+          ingredientTagMap.ingredient[RecipeIngredientSchema.tagId] = tagId;
+          batch.insert(RecipeIngredientSchema.table, ingredientTagMap.ingredient);
+        }
+
+        await batch.commit(noResult: true);
+        return id;
+      });
+
+      _recipeUpdates.add(RecipeAdded(recipe.copyWith(id: recipeId)));
+      return RepoSuccess(recipeId);
     } catch (e, s) {
       log(
         'Unexpected error when inserting recipe.',
@@ -131,24 +150,48 @@ class RecipeRepository{
       final recipeMap = _recipeToMap(recipe);
       final ingredientsTagsMaps = _recipeToIngredientsTagsMaps(recipe);
 
-      final batch = _db.batch();
-      batch.update(
-        RecipeSchema.table,
-        recipeMap,
-        where: '${RecipeSchema.id} = ?',
-        whereArgs: [recipe.id],
-      );
-      batch.delete(
-          RecipeIngredientSchema.table,
-          where: '${RecipeIngredientSchema.recipeId} = ?',
-          whereArgs: [recipe.id]
-      );
-      for (final ingredientTagMap in ingredientsTagsMaps) {
-        batch.insert(TagSchema.table, ingredientTagMap.tag, conflictAlgorithm: DbConflictAlgorithm.ignore);
-        batch.insert(RecipeIngredientSchema.table, ingredientTagMap.ingredient);
-      }
-      final results = await batch.commit();
-      count = results[0] as int;
+      // TODO: can probably be improved
+      count = await _db.transaction((txn) async {
+        final updatedCount = txn.update(
+          RecipeSchema.table,
+          recipeMap,
+          where: '${RecipeSchema.id} = ?',
+          whereArgs: [recipe.id],
+        );
+        txn.delete(
+            RecipeIngredientSchema.table,
+            where: '${RecipeIngredientSchema.recipeId} = ?',
+            whereArgs: [recipe.id]
+        );
+
+        final batch = txn.batch();
+        for (final ingredientTagMap in ingredientsTagsMaps) {
+          int tagId;
+          final tagResults = await txn.query(
+            TagSchema.table,
+            columns: [TagSchema.id],
+            where: '${TagSchema.name} = ?',
+            whereArgs: [ingredientTagMap.tag[TagSchema.name]],
+            limit: 1,
+          );
+          if (tagResults.isEmpty) {
+            try {
+              tagId = await txn.insert(TagSchema.table, ingredientTagMap.tag);
+            } catch (e) {
+              throw StateError("Tag doesn't exist, but can't be inserted."); // should never happen
+            }
+          } else {
+            tagId = tagResults.first[TagSchema.id] as int;
+          }
+
+          ingredientTagMap.ingredient[RecipeIngredientSchema.recipeId] = recipe.id!;
+          ingredientTagMap.ingredient[RecipeIngredientSchema.tagId] = tagId;
+          batch.insert(RecipeIngredientSchema.table, ingredientTagMap.ingredient);
+        }
+
+        await batch.commit(noResult: true);
+        return updatedCount;
+      });
     } catch (e, s) {
       log(
         'Unexpected error when updating recipe.',

@@ -93,9 +93,10 @@ class TagRepository{
 
       for (final row in rows) {
         final tag = _tagFromMap(row);
+        final unit = row[unitNameColumn] as String?;
 
         tagUnitsMap.putIfAbsent(tag, () => []);
-        tagUnitsMap[tag]!.add(row[unitNameColumn] as String);
+        if (unit != null) tagUnitsMap[tag]!.add(unit);
       }
 
       return RepoSuccess(tagUnitsMap);
