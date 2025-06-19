@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:food_manager/ui/pantry_item/view_models/pantry_item_form_viewmodel.dart';
+import 'package:food_manager/ui/pantry_item/widgets/pantry_item_form_screen.dart';
 import 'package:provider/provider.dart';
 
 import '../view_models/add_product_viewmodel.dart';
@@ -32,7 +34,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
       body: ListenableBuilder(
         listenable: viewModel,
         builder: (context, child) {
-          if (!viewModel.loaded) {
+          if (!viewModel.isLoaded) {
             viewModel.loadProductData();
             return const Center(child: CircularProgressIndicator());
           } else if (viewModel.errorMessage != null) {
@@ -48,12 +50,29 @@ class _AddProductScreenState extends State<AddProductScreen> {
               ),
             );
           } else if (viewModel.product != null) {
-            // TODO: check if containerSize is set and add based on that,
-            //  probably new form needed
+            // TODO: check if containerSize is set and add based on that, probably new form needed
+            if (!viewModel.hasNavigated) {
+              viewModel.hasNavigated = true;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) =>
+                          PantryItemFormScreen( // TODO new form
+                            viewModel: PantryItemFormViewmodel(
+                              pantryItemRepository: context.read(),
+                              product: viewModel.product!
+                            ),
+                          )
+                  ),
+                );
+              });
+            }
             return const Text("TODO");
           } else if (viewModel.form != null) {
-            if (!viewModel.navigated) {
-              viewModel.navigated = true;
+            // TODO: is this necessary?
+            if (!viewModel.hasNavigated) {
+              viewModel.hasNavigated = true;
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 Navigator.pushReplacement(
                   context,

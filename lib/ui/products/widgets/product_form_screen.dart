@@ -29,11 +29,13 @@ class ProductFormScreen extends StatefulWidget {
   final ProductFormModel? form;
 
   @override
-  State<ProductFormScreen > createState() => _AddProductFormState();
+  State<ProductFormScreen > createState() => _ProductFormScreenState();
 }
 
-// TODO: add shelf life field to form (and tag)
-class _AddProductFormState extends State<ProductFormScreen > {
+// TODO: add expiration date after opening field
+// TODO: add tag field
+// TODO: make base unit impossible to modify?
+class _ProductFormScreenState extends State<ProductFormScreen > {
   final _formKey = GlobalKey<FormState>();
   late ProductFormModel form;
   final List<_Unit> units = [_Unit()];

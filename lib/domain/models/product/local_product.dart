@@ -1,6 +1,9 @@
+import 'package:food_manager/domain/models/tag.dart';
+
 class LocalProduct {
   final int? id, shelfLifeAfterOpening;
-  final String name, referenceUnit, tag;
+  final String name, referenceUnit;
+  final Tag tag;
   final String? barcode;
   final Map<String, double> units;
   final double referenceValue, calories, carbs, protein, fat;

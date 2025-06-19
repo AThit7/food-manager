@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer';
 
 import 'package:food_manager/core/result/repo_result.dart';
+import 'package:food_manager/domain/models/tag.dart';
 
 import '../../../data/repositories/local_product_repository.dart';
 import '../../../domain/models/product/local_product.dart';
@@ -33,7 +34,7 @@ class ProductFormViewmodel {
       product = LocalProduct(
         id: form.id,
         name: form.name!,
-        tag: form.tag!,
+        tag: Tag(name: form.tag!),
         barcode: form.barcode,
         units: Map.of(form.units!),
         referenceUnit: form.referenceUnit!,

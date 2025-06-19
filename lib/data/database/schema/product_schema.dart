@@ -6,7 +6,6 @@ abstract class ProductSchema {
   static const id = 'id';
   static const tagId = 'tag_id';
   static const name = 'name';
-  static const tag = 'tag';
   static const barcode = 'barcode';
   static const referenceUnit = 'reference_unit';
   static const referenceValue = 'reference_value';
@@ -34,7 +33,7 @@ abstract class ProductSchema {
       
       FOREIGN KEY($tagId)
         REFERENCES ${TagSchema.table}(${TagSchema.id})
-        ON DELETE CASCADE
+        ON DELETE RESTRICT
     )
   ''';
 }

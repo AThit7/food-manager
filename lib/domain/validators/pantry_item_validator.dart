@@ -1,4 +1,4 @@
-import 'package:food_manager/domain/models/product/pantry_item.dart';
+import 'package:food_manager/domain/models/pantry_item.dart';
 import '../../core/exceptions/exceptions.dart';
 
 class PantryItemValidator{

@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:developer';
 
+import 'package:food_manager/data/database/schema/tag_schema.dart';
+import 'package:food_manager/data/repositories/tag_repository.dart';
+import 'package:food_manager/domain/models/tag.dart';
 import 'package:food_manager/domain/validators/local_product_validator.dart';
 
 import '../../core/result/repo_result.dart';
@@ -29,21 +32,24 @@ class ProductDeleted extends ProductEvent {
 // TODO: test commit(), is noResult: true be default? It looks like it isn't.
 class LocalProductRepository{
   final  DatabaseService _db;
+  final  TagRepository _tagRepository;
   final _productUpdates = StreamController<ProductEvent>.broadcast();
 
   Stream<ProductEvent> get productUpdates => _productUpdates.stream;
 
-  LocalProductRepository(this._db);
+  LocalProductRepository(DatabaseService databaseService, TagRepository tagRepository)
+      : _db = databaseService,
+        _tagRepository = tagRepository;
 
   void dispose() {
     _productUpdates.close();
   }
 
-  Map<String, dynamic> _localProductToMap(LocalProduct product) {
+  Map<String, dynamic> _localProductToMap(LocalProduct product, int tagId) {
     return {
       ProductSchema.id: product.id,
       ProductSchema.name: product.name,
-      ProductSchema.tag: product.tag,
+      ProductSchema.tagId: tagId,
       ProductSchema.barcode: product.barcode,
       ProductSchema.referenceUnit: product.referenceUnit,
       ProductSchema.referenceValue: product.referenceValue,
@@ -68,15 +74,15 @@ class LocalProductRepository{
     return result;
   }
 
-  LocalProduct _localProductFromMap(Map<String, dynamic> productMap) {
+  LocalProduct _localProductFromMap(Map<String, dynamic> productMap, Tag tag, [Map<String, double> units = const {}]) {
     return LocalProduct(
       id: productMap[ProductSchema.id] as int,
       name: productMap[ProductSchema.name] as String,
-      tag: productMap[ProductSchema.tag] as String,
+      tag: tag,
       barcode: productMap[ProductSchema.barcode] as String?,
       referenceUnit: productMap[ProductSchema.referenceUnit] as String,
       referenceValue: (productMap[ProductSchema.referenceValue] as num).toDouble(),
-      units: {},
+      units: Map.of(units),
       containerSize: (productMap[ProductSchema.containerSize] as num?)?.toDouble(),
       calories: (productMap[ProductSchema.calories] as num).toDouble(),
       carbs: (productMap[ProductSchema.carbs] as num).toDouble(),
@@ -92,21 +98,22 @@ class LocalProductRepository{
     }
 
     try {
-      final productMap = _localProductToMap(product);
       final unitMaps = _createUnitMaps(product);
 
-      final batch = _db.batch();
-      batch.insert(ProductSchema.table, productMap);
-      for (final unitMap in unitMaps) {
-        batch.insert(UnitSchema.table, unitMap);
-      }
-      final results = await batch.commit();
+      final productId = await _db.transaction((txn) async {
+        final tagId = await _tagRepository.getOrCreateTagByNameTxn(product.tag.name, txn);
+        final productMap = _localProductToMap(product, tagId);
 
-      if (results.isEmpty || results[0] is! int) {
-        return RepoError('Insert did not return expected ID.');
-      }
+        final id = await txn.insert(ProductSchema.table, productMap);
+        final batch = txn.batch();
+        for (final unitMap in unitMaps) {
+          unitMap[UnitSchema.productId] = id;
+          batch.insert(UnitSchema.table, unitMap);
+        }
+        await batch.commit();
+        return id;
+      });
 
-      final productId = results[0] as int;
       _productUpdates.add(ProductAdded(product.copyWith(id: productId)));
       return RepoSuccess(productId);
     } catch (e, s) {
@@ -131,25 +138,29 @@ class LocalProductRepository{
 
     int count;
     try {
-      final productMap = _localProductToMap(product);
       final unitMaps = _createUnitMaps(product);
 
-      final batch = _db.batch();
-      batch.update(
-        ProductSchema.table,
-        productMap,
-        where: '${ProductSchema.id} = ?',
-        whereArgs: [product.id],
-      );
-      batch.delete(
-        UnitSchema.table,
-        where: '${UnitSchema.productId} = ?',
-        whereArgs: [product.id]
-      );
-      for (final unitMap in unitMaps) {
-        batch.insert(UnitSchema.table, unitMap);
-      }
-      final results = await batch.commit();
+      final results = await _db.transaction((txn) async {
+        final tagId = await _tagRepository.getOrCreateTagByNameTxn(product.tag.name, txn);
+        final productMap = _localProductToMap(product, tagId);
+        
+        final batch = txn.batch();
+        batch.update(
+          ProductSchema.table,
+          productMap,
+          where: '${ProductSchema.id} = ?',
+          whereArgs: [product.id],
+        );
+        batch.delete(
+            UnitSchema.table,
+            where: '${UnitSchema.productId} = ?',
+            whereArgs: [product.id]
+        );
+        for (final unitMap in unitMaps) {
+          batch.insert(UnitSchema.table, unitMap);
+        }
+        return await batch.commit();
+      });
       count = results[0] as int;
     } catch (e, s) {
       log(
@@ -206,18 +217,27 @@ class LocalProductRepository{
   }
 
   Future<RepoResult<List<LocalProduct>>> listProducts() async {
-    const String unitNameColumn = 'unit_name';
-    const String unitMultiplierColumn = 'unit_multiplier';
+    const String productTable = 'product_table';
+    const String unitTable = 'unit_table';
+    const String tagTable = 'tag_table';
+    const String unitNameColumn = 'unit_name_column';
+    const String unitMultiplierColumn = 'unit_multiplier_column';
+    const String tagIdColumn = 'tag_id_column';
+    const String tagNameColumn = 'tag_name_column';
 
     try {
       final rows = await _db.rawQuery('''
         SELECT 
-          p.*,
-          u.${UnitSchema.name} AS $unitNameColumn,
-          u.${UnitSchema.multiplier} AS $unitMultiplierColumn
-        FROM ${ProductSchema.table} p
-        LEFT JOIN ${UnitSchema.table} u
-          ON p.${ProductSchema.id} = u.${UnitSchema.productId}
+          $productTable.*,
+          $unitTable.${UnitSchema.name} AS $unitNameColumn,
+          $unitTable.${UnitSchema.multiplier} AS $unitMultiplierColumn,
+          $tagTable.${TagSchema.id} AS $tagIdColumn,
+          $tagTable.${TagSchema.name} AS $tagNameColumn
+        FROM ${ProductSchema.table} $productTable
+        LEFT JOIN ${UnitSchema.table} $unitTable
+          ON $productTable.${ProductSchema.id} = $unitTable.${UnitSchema.productId}
+        LEFT JOIN ${TagSchema.table} $tagTable
+          ON $productTable.${ProductSchema.tagId} = $tagTable.${TagSchema.id}
       ''');
 
       final productsMap = <int, LocalProduct>{};
@@ -225,7 +245,8 @@ class LocalProductRepository{
       for (final row in rows) {
         final productId = row[ProductSchema.id] as int;
 
-        productsMap.putIfAbsent(productId, () => _localProductFromMap(row));
+        final tag = Tag(id: row[tagIdColumn] as int, name: row[tagNameColumn] as String);
+        productsMap.putIfAbsent(productId, () => _localProductFromMap(row, tag));
 
         final unitName = row[unitNameColumn] as String?;
         final unitMultiplier = row[unitMultiplierColumn] as num?;
@@ -247,7 +268,7 @@ class LocalProductRepository{
     }
   }
 
-  // TODO units
+  // TODO units and tag
   Future<RepoResult<LocalProduct?>> getProduct(int id) async {
     try {
       final List<Map<String, Object?>> productMaps = await _db.query(
@@ -259,7 +280,7 @@ class LocalProductRepository{
       if (productMaps.isEmpty) {
         return RepoFailure('No product with id $id.');
       }
-      return RepoSuccess(_localProductFromMap(productMaps.first));
+      return RepoSuccess(_localProductFromMap(productMaps.first, Tag(name: "TODO")));
     } catch (e, s) {
       log(
         'Unexpected error when fetching product with id $id.',
@@ -301,19 +322,45 @@ class LocalProductRepository{
     }
   }
 
-  // TODO units
+  // TODO units and tag
   Future<RepoResult<LocalProduct?>> getProductByBarcode(String barcode) async {
     try {
-      final List<Map<String, Object?>> productMaps = await _db.query(
-        ProductSchema.table,
-        where: '${ProductSchema.barcode} = ?',
-        whereArgs: [barcode],
-      );
+      final product = await _db.transaction((txn) async {
+        final List<Map<String, Object?>> productMaps = await txn.query(
+          ProductSchema.table,
+          where: '${ProductSchema.barcode} = ?',
+          whereArgs: [barcode],
+        );
+        if (productMaps.isEmpty) return null;
+        final batch = txn.batch();
+        batch.query(
+          TagSchema.table,
+          where: '${TagSchema.id} = ?',
+          whereArgs: [productMaps.first[ProductSchema.tagId]],
+        );
+        batch.query(
+          UnitSchema.table,
+          where: '${UnitSchema.productId} = ?',
+          whereArgs: [productMaps.first[ProductSchema.id]],
+        );
+        final results = await batch.commit();
+        final tagMap = (results.first as List<Map<String, Object?>>).first;
+        final tag = Tag(id: tagMap[TagSchema.id] as int, name: tagMap[TagSchema.name] as String);
+        final unitsMap = Map.fromEntries(
+            (results[1] as List<Map<String, Object?>>).map(
+                    (row) => MapEntry(
+                      row[UnitSchema.name] as String,
+                      (row[UnitSchema.multiplier] as num).toDouble(),
+                    )
+            )
+        );
+        return _localProductFromMap(productMaps.first, tag, unitsMap);
+      });
 
-      if (productMaps.isEmpty) {
+      if (product == null) {
         return RepoFailure('No product with barcode $barcode.');
       }
-      return RepoSuccess(_localProductFromMap(productMaps.first));
+      return RepoSuccess(product);
     } catch (e, s) {
       log(
         'Unexpected error when fetching product by barcode ($barcode).',

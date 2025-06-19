@@ -14,18 +14,18 @@ import '../data/repositories/local_product_repository.dart';
 Future<List<SingleChildWidget>> initProviders() async {
   final sharedPreferencesService = SharedPreferencesService();
   await sharedPreferencesService.init();
-  final DatabaseService databaseService = DatabaseServiceSqflite();
+  final databaseService = DatabaseServiceSqflite();
   await databaseService.init();
   final productInfoService = ProductInfoService();
+  final tagRepository = TagRepository(databaseService);
 
   return [
     Provider.value(value: sharedPreferencesService),
     Provider.value(value: databaseService),
-    Provider(create: (context) => TagRepository(databaseService)),
+    Provider.value(value: tagRepository),
     Provider(create: (context) => PantryItemRepository(databaseService)),
-    Provider(create: (context) => RecipeRepository(databaseService)),
-    Provider(create: (context) => LocalProductRepository(databaseService)),
-    Provider(create: (context) =>
-        ExternalProductRepository(productInfoService)),
+    Provider(create: (context) => RecipeRepository(databaseService, tagRepository)),
+    Provider(create: (context) => LocalProductRepository(databaseService, tagRepository)),
+    Provider(create: (context) => ExternalProductRepository(productInfoService)),
   ];
 }

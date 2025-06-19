@@ -1,4 +1,5 @@
 import 'package:food_manager/domain/models/product/local_product.dart';
+import 'package:food_manager/domain/validators/tag_validator.dart';
 import '../../core/exceptions/exceptions.dart';
 
 class ProductValidator{
@@ -9,7 +10,6 @@ class ProductValidator{
 
   static void validate(LocalProduct product) {
     if (product.name.trim().isEmpty) throw ValidationError("Invalid name.");
-    if (product.tag.trim().isEmpty) throw ValidationError("Invalid tag.");
     if (product.referenceUnit.trim().isEmpty) {
       throw ValidationError("Invalid reference unit.");
     }
@@ -40,6 +40,7 @@ class ProductValidator{
         product.shelfLifeAfterOpening! >= 0) {
       throw ValidationError("Invalid shelf life after opening.");
     }
+    TagValidator.validate(product.tag);
 
     product.units.forEach((key, value) {
       if (key.trim().isEmpty) throw ValidationError("Invalid barcode.");

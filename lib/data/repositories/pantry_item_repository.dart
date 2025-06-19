@@ -1,7 +1,10 @@
 import 'dart:developer';
 
+import 'package:food_manager/data/database/schema/tag_schema.dart';
+import 'package:food_manager/domain/models/tag.dart';
+
 import '../../core/result/repo_result.dart';
-import '../../domain/models/product/pantry_item.dart';
+import '../../domain/models/pantry_item.dart';
 import '../../domain/models/product/local_product.dart';
 import '../../domain/validators/pantry_item_validator.dart';
 import '../../data/services/database/database_service.dart';
@@ -23,8 +26,7 @@ class PantryItemRepository{
     };
   }
 
-  PantryItem _pantryItemFromMap(Map<String, dynamic> itemMap,
-      LocalProduct product) {
+  PantryItem _pantryItemFromMap(Map<String, dynamic> itemMap, LocalProduct product) {
     return PantryItem(
       id: itemMap[PantryItemSchema.id] as int,
       product: product,
@@ -100,10 +102,13 @@ class PantryItemRepository{
     }
   }
 
+  // TODO define table names and column names
   Future<RepoResult<List<PantryItem>>> listPantryItems() async {
     try {
       const String itemId = "item_id";
       const String productId = "product_id";
+      const String tagId = "tag_id";
+      const String tagName = "tag_name";
       final List<Map<String, Object?>> rows = await _db.rawQuery('''
       SELECT 
         i.${PantryItemSchema.id} AS $itemId,
@@ -118,10 +123,14 @@ class PantryItemRepository{
         p.${ProductSchema.calories},
         p.${ProductSchema.carbs},
         p.${ProductSchema.protein},
-        p.${ProductSchema.fat}
+        p.${ProductSchema.fat},
+        t.${TagSchema.id} AS $tagId,
+        t.${TagSchema.name} AS $tagName
       FROM ${PantryItemSchema.table} i
       INNER JOIN ${ProductSchema.table} p
         ON i.${PantryItemSchema.productId} = p.${ProductSchema.id} 
+      INNER JOIN ${TagSchema.table} t
+        ON p.${ProductSchema.tagId} = t.${TagSchema.id} 
     ''');
 
       final List<PantryItem> pantryItems = rows.map((row) {
@@ -129,7 +138,7 @@ class PantryItemRepository{
           id: row[itemId] as int,
           barcode: row[ProductSchema.barcode] as String?,
           name: row[ProductSchema.name] as String,
-          tag: row[ProductSchema.tag] as String,
+          tag: Tag(id: row[tagId] as int, name: row[tagName] as String),
           referenceUnit: row[ProductSchema.referenceUnit] as String,
           referenceValue: row[ProductSchema.referenceValue] as double,
           containerSize: row[ProductSchema.containerSize] as double?,
@@ -164,10 +173,13 @@ class PantryItemRepository{
     }
   }
 
+  // TODO define table names and column names
   Future<RepoResult<PantryItem>> getPantryItem(int id) async {
     try {
       const String itemId = "item_id";
       const String productId = "product_id";
+      const String tagId = "tag_id";
+      const String tagName = "tag_name";
       final List<Map<String, Object?>> rows = await _db.rawQuery('''
       SELECT 
         i.${PantryItemSchema.id} AS $itemId,
@@ -182,10 +194,14 @@ class PantryItemRepository{
         p.${ProductSchema.calories},
         p.${ProductSchema.carbs},
         p.${ProductSchema.protein},
-        p.${ProductSchema.fat}
+        p.${ProductSchema.fat},
+        t.${TagSchema.id} AS $tagId,
+        t.${TagSchema.name} AS $tagName
       FROM ${PantryItemSchema.table} i
       INNER JOIN ${ProductSchema.table} p
         ON i.${PantryItemSchema.productId} = p.${ProductSchema.id} 
+      INNER JOIN ${TagSchema.table} t
+        ON p.${ProductSchema.tagId} = t.${TagSchema.id} 
       WHERE
         i.${PantryItemSchema.id} = ?
     ''', [id]);
@@ -199,7 +215,7 @@ class PantryItemRepository{
         id: row[itemId] as int,
         barcode: row[ProductSchema.barcode] as String?,
         name: row[ProductSchema.name] as String,
-        tag: row[ProductSchema.tag] as String,
+        tag: Tag(id: row[tagId] as int, name: row[tagName] as String),
         referenceUnit: row[ProductSchema.referenceUnit] as String,
         referenceValue: row[ProductSchema.referenceValue] as double,
         containerSize: row[ProductSchema.containerSize] as double?,

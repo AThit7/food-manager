@@ -20,18 +20,18 @@ class AddProductViewmodel extends ChangeNotifier {
   LocalProduct? product;
   ProductFormModel? form;
   String? errorMessage;
-  bool loaded = false;
-  bool navigated = false;
+  bool isLoaded = false;
+  bool hasNavigated = false;
 
   Future<void> loadProductData() async {
-    loaded = false;
+    isLoaded = false;
     product = null;
     form = null;
     errorMessage = null;
     log('Loading product data for barcode $barcode');
     if (barcode == null) {
       form = ProductFormModel();
-      loaded = true;
+      isLoaded = true;
       notifyListeners();
       return;
     }
@@ -63,7 +63,7 @@ class AddProductViewmodel extends ChangeNotifier {
         }
       }
     }
-    loaded = true;
+    isLoaded = true;
     log('Loading done.');
     notifyListeners();
   }

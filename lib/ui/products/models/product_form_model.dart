@@ -30,7 +30,7 @@ class ProductFormModel {
     id = product.id;
     barcode = product.barcode;
     name = product.name;
-    tag = product.tag;
+    tag = product.tag.name;
     referenceUnit = product.referenceUnit;
     referenceValue = product.referenceValue.toString();
     containerSize = product.containerSize?.toString();

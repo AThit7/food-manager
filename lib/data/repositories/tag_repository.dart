@@ -5,6 +5,7 @@ import 'package:food_manager/data/database/schema/product_schema.dart';
 import 'package:food_manager/data/database/schema/tag_schema.dart';
 import 'package:food_manager/data/database/schema/unit_schema.dart';
 import 'package:food_manager/domain/models/tag.dart';
+import 'package:food_manager/domain/validators/tag_validator.dart';
 
 import '../../core/result/repo_result.dart';
 import '../../data/services/database/database_service.dart';
@@ -109,6 +110,42 @@ class TagRepository{
         level: 1200,
       );
       return RepoError('Unexpected error when fetching all tag: $e');
+    }
+  }
+
+  Future<RepoResult<Tag>> getOrCreateTagByName(String name) async {
+    if (!TagValidator.isValid(Tag(name: name))) {
+      throw ArgumentError('Tag name is invalid.');
+    }
+
+    try {
+      final id = await _db.transaction((txn) => getOrCreateTagByNameTxn(name, txn));
+      return RepoSuccess(Tag(id: id, name: name));
+    } catch (e, s) {
+      log(
+        'Unexpected error when getting/inserting a tag.',
+        name: 'TagRepository',
+        error: e,
+        stackTrace: s,
+        level: 1200,
+      );
+      return RepoError('Unexpected error when getting/inserting a tag: $e');
+    }
+  }
+
+  Future<int> getOrCreateTagByNameTxn(String name, DbTransaction txn) async {
+    final tagResults = await txn.query(
+      TagSchema.table,
+      columns: [TagSchema.id],
+      where: '${TagSchema.name} = ?',
+      whereArgs: [name],
+      limit: 1,
+    );
+
+    if (tagResults.isEmpty) {
+      return await txn.insert(TagSchema.table, _tagToMap(Tag(name: name)));
+    } else {
+      return tagResults.first[TagSchema.id] as int;
     }
   }
 }

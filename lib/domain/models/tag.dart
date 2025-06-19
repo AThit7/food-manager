@@ -1,4 +1,6 @@
 class Tag {
+  // name is used as a primary identifier outside of contexts
+  // when we clearly want to change the name of an existing tag
   final int? id;
   final String name;
 

@@ -3,6 +3,7 @@ import 'dart:developer';
 
 import 'package:food_manager/data/database/schema/recipe_ingredient_schema.dart';
 import 'package:food_manager/data/database/schema/tag_schema.dart';
+import 'package:food_manager/data/repositories/tag_repository.dart';
 import 'package:food_manager/domain/models/recipe_ingredient.dart';
 import 'package:food_manager/domain/models/tag.dart';
 import 'package:food_manager/domain/validators/recipe_validator.dart';
@@ -30,12 +31,15 @@ class RecipeDeleted extends RecipeEvent {
 }
 
 class RecipeRepository{
-  final  DatabaseService _db;
+  final DatabaseService _db;
+  final TagRepository _tagRepository;
   final _recipeUpdates = StreamController<RecipeEvent>.broadcast();
 
   Stream<RecipeEvent> get recipeUpdates => _recipeUpdates.stream;
 
-  RecipeRepository(this._db);
+  RecipeRepository(DatabaseService databaseService, TagRepository tagRepository)
+      : _db = databaseService,
+        _tagRepository = tagRepository;
 
   void dispose() {
     _recipeUpdates.close();
@@ -96,24 +100,7 @@ class RecipeRepository{
         final batch = txn.batch();
 
         for (final ingredientTagMap in ingredientsTagsMaps) {
-          int tagId;
-          final tagResults = await txn.query(
-            TagSchema.table,
-            columns: [TagSchema.id],
-            where: '${TagSchema.name} = ?',
-            whereArgs: [ingredientTagMap.tag[TagSchema.name]],
-            limit: 1,
-          );
-          if (tagResults.isEmpty) {
-            try {
-              tagId = await txn.insert(TagSchema.table, ingredientTagMap.tag);
-            } catch (e) {
-              throw StateError("Tag doesn't exist, but can't be inserted."); // should never happen
-            }
-          } else {
-            tagId = tagResults.first[TagSchema.id] as int;
-          }
-
+          final tagId = await _tagRepository.getOrCreateTagByNameTxn(ingredientTagMap.tag[TagSchema.name], txn);
           ingredientTagMap.ingredient[RecipeIngredientSchema.recipeId] = id;
           ingredientTagMap.ingredient[RecipeIngredientSchema.tagId] = tagId;
           batch.insert(RecipeIngredientSchema.table, ingredientTagMap.ingredient);
@@ -166,24 +153,7 @@ class RecipeRepository{
 
         final batch = txn.batch();
         for (final ingredientTagMap in ingredientsTagsMaps) {
-          int tagId;
-          final tagResults = await txn.query(
-            TagSchema.table,
-            columns: [TagSchema.id],
-            where: '${TagSchema.name} = ?',
-            whereArgs: [ingredientTagMap.tag[TagSchema.name]],
-            limit: 1,
-          );
-          if (tagResults.isEmpty) {
-            try {
-              tagId = await txn.insert(TagSchema.table, ingredientTagMap.tag);
-            } catch (e) {
-              throw StateError("Tag doesn't exist, but can't be inserted."); // should never happen
-            }
-          } else {
-            tagId = tagResults.first[TagSchema.id] as int;
-          }
-
+          final tagId = await _tagRepository.getOrCreateTagByNameTxn(ingredientTagMap.tag[TagSchema.name], txn);
           ingredientTagMap.ingredient[RecipeIngredientSchema.recipeId] = recipe.id!;
           ingredientTagMap.ingredient[RecipeIngredientSchema.tagId] = tagId;
           batch.insert(RecipeIngredientSchema.table, ingredientTagMap.ingredient);
