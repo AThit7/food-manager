@@ -89,7 +89,6 @@ class RecipeFormScreen extends StatefulWidget {
   State<RecipeFormScreen > createState() => _RecipeFormState();
 }
 
-// TODO: add shelf life field to form (and tag)
 class _RecipeFormState extends State<RecipeFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameFieldKey = GlobalKey<FormFieldState>();
@@ -105,6 +104,13 @@ class _RecipeFormState extends State<RecipeFormScreen> {
     setState(() {
       ingredients.addAll(results.map((e) => _Ingredient.fromIngredientData(e, widget.viewModel.getTagUnitStatus)));
     });
+  }
+
+  @override
+  void dispose() {
+    ingredientsFieldController.dispose();
+    ingredients.map((e) => e.dispose());
+    super.dispose();
   }
 
   @override
@@ -133,91 +139,11 @@ class _RecipeFormState extends State<RecipeFormScreen> {
           Expanded(
             child: Column(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        key: ingredient.amountFieldKey,
-                        controller: ingredient.amountController,
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          floatingLabelBehavior: FloatingLabelBehavior.always,
-                          labelText: 'Amount',
-                        ),
-                        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d*$'))],
-                        enabled: !isSubmitting,
-                        validator: (String? value) {
-                          if (value != null && value.isNotEmpty && !_isValidAmount(value)) {
-                            return 'Invalid value';
-                          }
-                          return null;
-                        },
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Autocomplete<String>(
-                        optionsBuilder: (TextEditingValue textEditingValue) {
-                          final tag = ingredient.tagController.text;
-                          final unit = ingredient.unitController.text;
-
-                          if (textEditingValue.text.isEmpty) return widget.viewModel.getUnits(unit); // TODO: remove?
-                          return widget.viewModel.unitSearch(unit, tag);
-                        },
-                        optionsViewBuilder: (context, onSelected, options) {
-                          final fieldBox = ingredient.unitFieldKey.currentContext?.findRenderObject() as RenderBox?;
-                          final fieldWidth = fieldBox?.size.width ?? 200;
-
-                          return Align(
-                            alignment: Alignment.topLeft,
-                            child: Material(
-                              elevation: 4.0,
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(maxWidth: fieldWidth), // adjust width here
-                                child: ListView(
-                                  padding: EdgeInsets.zero,
-                                  shrinkWrap: true,
-                                  children: options.map((String option) {
-                                    return ListTile(
-                                      title: Text(option),
-                                      onTap: () => onSelected(option),
-                                    );
-                                  }).toList(),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                        fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-                          controller.text = ingredient.unitController.text;
-                          return TextFormField(
-                            key: ingredient.unitFieldKey,
-                            focusNode: focusNode,
-                            controller: controller,
-                            decoration: InputDecoration(
-                              border: OutlineInputBorder(),
-                              floatingLabelBehavior:
-                              FloatingLabelBehavior.always,
-                              labelText: 'Unit',
-                            ),
-                            enabled: !isSubmitting,
-                            onChanged: (String value) => ingredient.unitController.text = value,
-                            onFieldSubmitted: (_) => onFieldSubmitted(),
-                          );
-                        },
-                        onSelected: (String selection) {
-                          ingredient.unitController.text = selection;
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8),
                 Autocomplete<String>(
                   optionsBuilder: (TextEditingValue textEditingValue) {
-                    final tag = ingredient.tagController.text;
+                    final tag = textEditingValue.text;
 
-                    if (textEditingValue.text.isEmpty) return widget.viewModel.tags;
+                    if (tag.isEmpty) return widget.viewModel.tags;
                     return widget.viewModel.tagSearch(tag);
                   },
                   optionsViewBuilder: (context, onSelected, options) {
@@ -252,8 +178,7 @@ class _RecipeFormState extends State<RecipeFormScreen> {
                       controller: controller,
                       decoration: InputDecoration(
                         border: OutlineInputBorder(),
-                        floatingLabelBehavior:
-                        FloatingLabelBehavior.always,
+                        floatingLabelBehavior: FloatingLabelBehavior.always,
                         labelText: 'Tag',
                         hintText: 'ex. chicken breast',
                       ),
@@ -265,6 +190,85 @@ class _RecipeFormState extends State<RecipeFormScreen> {
                   onSelected: (String selection) {
                     ingredient.tagController.text = selection;
                   },
+                ),
+                SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        key: ingredient.amountFieldKey,
+                        controller: ingredient.amountController,
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          floatingLabelBehavior: FloatingLabelBehavior.always,
+                          labelText: 'Amount',
+                        ),
+                        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d*$'))],
+                        enabled: !isSubmitting,
+                        validator: (String? value) {
+                          if (value != null && value.isNotEmpty && !_isValidAmount(value)) {
+                            return 'Invalid value';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Autocomplete<String>(
+                        optionsBuilder: (TextEditingValue textEditingValue) {
+                          final tag = ingredient.tagController.text;
+                          final unit = textEditingValue.text;
+
+                          if (unit.isEmpty) return widget.viewModel.getUnits(tag); // TODO: remove?
+                          return widget.viewModel.unitSearch(unit, tag);
+                        },
+                        optionsViewBuilder: (context, onSelected, options) {
+                          final fieldBox = ingredient.unitFieldKey.currentContext?.findRenderObject() as RenderBox?;
+                          final fieldWidth = fieldBox?.size.width ?? 200;
+
+                          return Align(
+                            alignment: Alignment.topLeft,
+                            child: Material(
+                              elevation: 4.0,
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(maxWidth: fieldWidth), // adjust width here
+                                child: ListView(
+                                  padding: EdgeInsets.zero,
+                                  shrinkWrap: true,
+                                  children: options.map((String option) {
+                                    return ListTile(
+                                      title: Text(option),
+                                      onTap: () => onSelected(option),
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                        fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                          controller.text = ingredient.unitController.text;
+                          return TextFormField(
+                            key: ingredient.unitFieldKey,
+                            focusNode: focusNode,
+                            controller: controller,
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(),
+                              floatingLabelBehavior: FloatingLabelBehavior.always,
+                              labelText: 'Unit',
+                            ),
+                            enabled: !isSubmitting,
+                            onChanged: (String value) => ingredient.unitController.text = value,
+                            onFieldSubmitted: (_) => onFieldSubmitted(),
+                          );
+                        },
+                        onSelected: (String selection) {
+                          ingredient.unitController.text = selection;
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -398,7 +402,7 @@ class _RecipeFormState extends State<RecipeFormScreen> {
             ],
           ),
           Text(
-            ingredient.originalValue, //'“${ingredient.originalInput.toLowerCase()}”',
+            ingredient.originalValue,
             style: theme.textTheme.bodySmall?.copyWith(
               fontStyle: FontStyle.italic,
               color: Colors.grey[600],

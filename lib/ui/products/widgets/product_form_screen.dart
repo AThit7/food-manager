@@ -452,11 +452,10 @@ class _ProductFormScreenState extends State<ProductFormScreen > {
                     if (_formKey.currentState!.validate()) {
                       _formKey.currentState!.save();
 
-                      final unitsMap = <String, double>{};
+                      final unitsMap = <String, double>{form.referenceUnit!: 1.0};
                       for (final unit in units) {
                         final name = unit.nameController.value.text;
-                        final value = double.tryParse(
-                            unit.valueController.value.text);
+                        final value = double.tryParse(unit.valueController.value.text);
                         if (name.isNotEmpty && _isValidAmountRaw(value, true)) {
                           unitsMap[name] = value!;
                         }
@@ -464,8 +463,7 @@ class _ProductFormScreenState extends State<ProductFormScreen > {
                       form.units = unitsMap;
 
                       setState(() => isSubmitting = true);
-                      final result = await widget.viewModel.saveProduct(
-                          form.copyWith());
+                      final result = await widget.viewModel.saveProduct(form.copyWith());
                       if (!context.mounted) return;
 
                       switch (result) {
@@ -473,11 +471,9 @@ class _ProductFormScreenState extends State<ProductFormScreen > {
                           Navigator.pop(context, result.product);
                         case InsertValidationFailure():
                           ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text("Failed to add product. "
-                                  "Invalid product details.")));
+                              SnackBar(content: Text("Failed to add product. ""Invalid product details.")));
                         case InsertRepoFailure():
-                          ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text("Unexpected error.")));
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Unexpected error.")));
                       }
 
                       setState(() => isSubmitting = false);

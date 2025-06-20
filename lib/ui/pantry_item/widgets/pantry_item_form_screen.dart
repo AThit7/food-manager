@@ -51,6 +51,12 @@ class _PantryItemFormScreenState extends State<PantryItemFormScreen > {
   }
 
   @override
+  void dispose() {
+    _dateFieldController.dispose();
+    super.dispose();
+  }
+
+  @override
   void initState() {
     super.initState();
     if (widget.form != null) {
@@ -71,9 +77,7 @@ class _PantryItemFormScreenState extends State<PantryItemFormScreen > {
     ];
     final product = widget.viewModel.product;
     final units = List<DropdownMenuItem<String>>.unmodifiable(
-        [product.referenceUnit, ...product.units.keys].map(
-              (unit) => DropdownMenuItem<String>(value: unit, child: Text(unit)),
-        )
+        product.units.keys.map((unit) => DropdownMenuItem<String>(value: unit, child: Text(unit)))
     );
 
     return Scaffold(

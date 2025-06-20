@@ -53,7 +53,7 @@ class RecipeFormViewmodel extends ChangeNotifier {
   }
 
   Iterable<String> unitSearch(String unit, String tag) {
-    return _unitFuseMap[tag]?.search(tag).map((e) => e.item) ?? Iterable<String>.empty();
+    return _unitFuseMap[tag]?.search(unit).map((e) => e.item) ?? Iterable<String>.empty();
   }
 
   String? getTagUnitStatus(String tag, String unit) {
@@ -67,7 +67,8 @@ class RecipeFormViewmodel extends ChangeNotifier {
     Recipe recipe;
     try {
       if (form.name == null || form.ingredients == null || form.preparationTime == null) {
-        throw ArgumentError("Required form fields were null. Form: ${form.name} ${form.ingredients?.isEmpty.toString()} ${form.preparationTime}");
+        throw ArgumentError("Required form fields were null. Form: ${form.name} "
+            "${form.ingredients?.isEmpty.toString()} ${form.preparationTime}");
       }
 
       final recipeIngredients = <RecipeIngredient>[];
@@ -133,7 +134,7 @@ class RecipeFormViewmodel extends ChangeNotifier {
     switch (result) {
       case RepoSuccess():
         _tagUnitsMap = Map<String, ({int id, List<String> units})>.fromEntries(
-            result.data.entries.map((e) => MapEntry(e.key.name, (id: e.key.id!, units: e.value))));
+            result.data.map((e) => MapEntry(e.tag.name, (id: e.tag.id!, units: List.of(e.units)))));
       case RepoError():
         _errorMessage = result.message;
       case RepoFailure():

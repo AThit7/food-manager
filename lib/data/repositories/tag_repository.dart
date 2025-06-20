@@ -72,7 +72,7 @@ class TagRepository{
     }
   }
 
-  Future<RepoResult<Map<Tag, List<String>>>> getTagUnitsMap() async {
+  Future<RepoResult<Iterable<({Tag tag, List<String> units})>>> getTagUnitsMap() async {
     const String unitNameColumn = 'unit_name_column';
     const String unitTable = 'unit_table';
     const String productTable = 'product_table';
@@ -84,23 +84,23 @@ class TagRepository{
           $tagTable.*,
           $unitTable.${UnitSchema.name} AS $unitNameColumn
         FROM ${TagSchema.table} $tagTable
-        LEFT OUTER JOIN ${ProductSchema.table} $productTable
+        LEFT JOIN ${ProductSchema.table} $productTable
           ON $tagTable.${TagSchema.id} = $productTable.${ProductSchema.tagId}
-        LEFT OUTER JOIN ${UnitSchema.table} $unitTable
+        LEFT JOIN ${UnitSchema.table} $unitTable
           ON $productTable.${ProductSchema.id} = $unitTable.${UnitSchema.productId}
       ''');
 
-      final tagUnitsMap = <Tag, List<String>>{};
+      final tagUnitsMap = <String, ({Tag tag, List<String> units})>{};
 
       for (final row in rows) {
         final tag = _tagFromMap(row);
         final unit = row[unitNameColumn] as String?;
 
-        tagUnitsMap.putIfAbsent(tag, () => []);
-        if (unit != null) tagUnitsMap[tag]!.add(unit);
+        tagUnitsMap.putIfAbsent(tag.name, () => (tag: tag, units: []));
+        if (unit != null) tagUnitsMap[tag.name]!.units.add(unit);
       }
 
-      return RepoSuccess(tagUnitsMap);
+      return RepoSuccess(tagUnitsMap.values);
     } catch (e, s) {
       log(
         'Unexpected error when fetching tag-units map.',
