@@ -1,5 +1,6 @@
 import 'package:food_manager/domain/models/tag.dart';
 
+// TODO: add expectedShelfLife to repo and other places
 class LocalProduct {
   final int? id, shelfLifeAfterOpening;
   final String name, referenceUnit;
@@ -8,6 +9,7 @@ class LocalProduct {
   final Map<String, double> units;
   final double referenceValue, calories, carbs, protein, fat;
   final double? containerSize;
+  final int expectedShelfLife;
 
   const LocalProduct({
     required this.name,
@@ -19,6 +21,7 @@ class LocalProduct {
     required this.carbs,
     required this.protein,
     required this.fat,
+    required this.expectedShelfLife,
     this.id,
     this.barcode,
     this.containerSize,
@@ -39,6 +42,8 @@ class LocalProduct {
       fat: fat,
       barcode: barcode,
       containerSize: containerSize,
+      shelfLifeAfterOpening: shelfLifeAfterOpening,
+      expectedShelfLife: expectedShelfLife,
     );
   }
 }

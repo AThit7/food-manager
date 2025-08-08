@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:food_manager/ui/planner/view_models/planner_viewmodel.dart';
+import 'package:food_manager/ui/planner/widgets/planner_screen.dart';
 import 'package:food_manager/ui/recipes/view_models/all_recipes_viewmodel.dart';
 import 'package:food_manager/ui/recipes/view_models/recipe_form_viewmodel.dart';
 import 'package:food_manager/ui/recipes/widgets/all_recipes_screen.dart';
@@ -78,6 +80,20 @@ class HomeScreen extends StatelessWidget {
                 );
               },
               child: const Text('All recipes'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) {
+                        final viewModel = PlannerViewmodel();
+                        return PlannerScreen(viewModel: viewModel);
+                      }
+                  ),
+                );
+              },
+              child: const Text('Meal plan'),
             ),
           ],
         ),

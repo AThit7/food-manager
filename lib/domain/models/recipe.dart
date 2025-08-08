@@ -6,6 +6,9 @@ class Recipe {
   final List<RecipeIngredient> ingredients;
   final int preparationTime;
   final String? instructions;
+  // TODO add those 2 everywhere
+  final int timesUsed;
+  final DateTime? lastTimeUsed;
 
   Recipe({
     required this.name,
@@ -13,6 +16,8 @@ class Recipe {
     required this.preparationTime,
     this.instructions,
     this.id,
+    this.timesUsed = 0,
+    this.lastTimeUsed,
   });
 
   Recipe copyWith({int? id}) {
@@ -22,6 +27,8 @@ class Recipe {
       ingredients: ingredients,
       preparationTime: preparationTime,
       instructions: instructions,
+      timesUsed: timesUsed,
+      lastTimeUsed: lastTimeUsed,
     );
   }
 }
