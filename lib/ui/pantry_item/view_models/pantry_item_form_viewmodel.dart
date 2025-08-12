@@ -37,7 +37,8 @@ class PantryItemFormViewmodel {
         id: form.id,
         product: product,
         quantity: double.parse(form.quantity!),
-        expirationDate: form.expirationDate, // TODO will it parse?
+        expirationDate: form.expirationDate!, // TODO will it parse?
+        isOpen: form.isOpen
       );
       PantryItemValidator.validate(pantryItem);
     } catch (e) {

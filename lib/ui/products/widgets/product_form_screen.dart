@@ -7,10 +7,12 @@ import '../models/product_form_model.dart';
 class _Unit {
   final nameFieldKey = GlobalKey<FormFieldState>();
   final valueFieldKey = GlobalKey<FormFieldState>();
-  final nameController = TextEditingController();
-  final valueController = TextEditingController();
+  final  TextEditingController nameController;
+  final  TextEditingController valueController;
 
-  _Unit();
+  _Unit({String? name, double? value})
+      : nameController = TextEditingController(text: name),
+        valueController = TextEditingController(text: value.toString());
 
   void dispose() {
     nameController.dispose();
@@ -32,9 +34,6 @@ class ProductFormScreen extends StatefulWidget {
   State<ProductFormScreen > createState() => _ProductFormScreenState();
 }
 
-// TODO: add expiration date after opening field
-// TODO: add tag field
-// TODO: make base unit impossible to modify?
 class _ProductFormScreenState extends State<ProductFormScreen > {
   final _formKey = GlobalKey<FormState>();
   late ProductFormModel form;
@@ -63,6 +62,22 @@ class _ProductFormScreenState extends State<ProductFormScreen > {
         return null;
       };
 
+  FormFieldValidator<String?> _intFieldValidator([bool canBeZero = false]) =>
+          (String? value) {
+        if (value == null || value.isEmpty) {
+          return 'Enter some value';
+        }
+        final parsed = int.tryParse(value);
+        if (parsed == null) {
+          return 'Invalid value';
+        } else if (canBeZero && parsed < 0) {
+          return 'The value must be non negative';
+        } else if (!canBeZero && parsed <= 0) {
+          return 'The value must be positive';
+        }
+        return null;
+      };
+
   String? _stringFieldValidator(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'Please enter some name';
@@ -81,7 +96,9 @@ class _ProductFormScreenState extends State<ProductFormScreen > {
     hasContainer = form.containerSize != null;
     containerSizeController = TextEditingController(text: form.containerSize);
 
-    // TODO: load units
+    for (final entry in form.units?.entries ?? const Iterable<MapEntry<String, double>>.empty()) {
+      units.add(_Unit(name: entry.key, value: entry.value));
+    }
   }
 
   @override
@@ -111,8 +128,7 @@ class _ProductFormScreenState extends State<ProductFormScreen > {
           child: ListView(
             children: [
               TextFormField(
-                keyboardType: TextInputType.numberWithOptions(
-                    decimal: true),
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'^\d*$')),
                 ],
@@ -123,8 +139,7 @@ class _ProductFormScreenState extends State<ProductFormScreen > {
                   form.barcode = value.isEmpty ? null : value;
                 },
                 validator: (String? value) {
-                  if (value != null && value.isNotEmpty
-                      && value.contains(RegExp(r'\D'))) {
+                  if (value != null && value.isNotEmpty && value.contains(RegExp(r'\D'))) {
                     return 'Invalid barcode';
                   }
                   return null;
@@ -153,12 +168,42 @@ class _ProductFormScreenState extends State<ProductFormScreen > {
               ),
               Row(
                 children: [
+                  TextFormField(
+                    keyboardType: TextInputType.numberWithOptions(),
+                    inputFormatters: amountFormatters,
+                    decoration: const InputDecoration(
+                      labelText: 'Expected shelf life',
+                      hintText: "ex. 14",
+                      suffix: Text(" days"),
+                    ),
+                    enabled: !isSubmitting,
+                    initialValue: form.expectedShelfLife,
+                    onChanged: (String? value) => form.expectedShelfLife = value,
+                    validator: _intFieldValidator(),
+                  ),
+                  SizedBox(width: 6),
+                  TextFormField(
+                    keyboardType: TextInputType.numberWithOptions(),
+                    inputFormatters: amountFormatters,
+                    decoration: const InputDecoration(
+                      labelText: 'Shelf life after opening',
+                      hintText: "ex. 3",
+                      suffix: Text(" days"),
+                    ),
+                    enabled: !isSubmitting,
+                    initialValue: form.shelfLifeAfterOpening,
+                    onChanged: (String? value) => form.shelfLifeAfterOpening = value,
+                    validator: _intFieldValidator(),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
                   Text('Reference value:'),
                   SizedBox(width: 10),
                   Expanded(
                     child: TextFormField(
-                      keyboardType: TextInputType.numberWithOptions(
-                          decimal: true),
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
                       inputFormatters: amountFormatters,
                       decoration: const InputDecoration(
                         labelText: "Amount",
@@ -176,7 +221,7 @@ class _ProductFormScreenState extends State<ProductFormScreen > {
                   ),
                   SizedBox(width: 10),
                   Expanded(
-                    child: TextFormField(
+                    child: TextFormField( // TODO has to be either g or ml
                       decoration: const InputDecoration(
                           labelText: "Unit",
                           hintText: 'ex. g, ml'
@@ -215,8 +260,7 @@ class _ProductFormScreenState extends State<ProductFormScreen > {
                   Expanded(
                     child: TextFormField(
                       controller: containerSizeController,
-                      keyboardType: TextInputType.numberWithOptions(
-                          decimal: true),
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
                       inputFormatters: amountFormatters,
                       decoration: InputDecoration(
                         labelText: "Container size",
@@ -273,9 +317,7 @@ class _ProductFormScreenState extends State<ProductFormScreen > {
                     "Alternative units",
                     style: theme.textTheme.titleMedium,
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   childrenPadding: const EdgeInsets.all(16.0),
                   backgroundColor: theme.colorScheme.surfaceContainer,
                   children: [
@@ -311,8 +353,7 @@ class _ProductFormScreenState extends State<ProductFormScreen > {
                             child: TextFormField(
                               key: unit.valueFieldKey,
                               controller: unit.valueController,
-                              keyboardType: TextInputType.numberWithOptions(
-                                  decimal: true),
+                              keyboardType: TextInputType.numberWithOptions(decimal: true),
                               inputFormatters: amountFormatters,
                               decoration: InputDecoration(
                                 labelText: 'Amount',
@@ -332,8 +373,7 @@ class _ProductFormScreenState extends State<ProductFormScreen > {
                                 }
                               },
                               validator: (String? value) {
-                                if (value != null && value.isNotEmpty
-                                    && !_isValidAmount(value)) {
+                                if (value != null && value.isNotEmpty && !_isValidAmount(value)) {
                                   return 'Invalid value';
                                 }
                                 return null;
@@ -370,15 +410,12 @@ class _ProductFormScreenState extends State<ProductFormScreen > {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Nutrition Facts per '
-                            '${form.referenceValue ?? ""}'
-                            '${form.referenceUnit}',
+                        'Nutrition Facts per ${form.referenceValue ?? ""}${form.referenceUnit}',
                         style: theme.textTheme.titleMedium,
                         textAlign: TextAlign.left,
                       ),
                       TextFormField(
-                        keyboardType: TextInputType.numberWithOptions(
-                            decimal: true),
+                        keyboardType: TextInputType.numberWithOptions(decimal: true),
                         inputFormatters: amountFormatters,
                         decoration: const InputDecoration(
                           labelText: 'Calories',
@@ -388,13 +425,11 @@ class _ProductFormScreenState extends State<ProductFormScreen > {
                         enabled: !isSubmitting,
                         textAlign: TextAlign.right,
                         initialValue: form.calories?.toString(),
-                        onChanged: (String? value) =>
-                        form.calories = value,
+                        onChanged: (String? value) => form.calories = value,
                         validator: _doubleFieldValidator(true),
                       ),
                       TextFormField(
-                        keyboardType: TextInputType.numberWithOptions(
-                            decimal: true),
+                        keyboardType: TextInputType.numberWithOptions(decimal: true),
                         inputFormatters: amountFormatters,
                         decoration: const InputDecoration(
                           labelText: 'Carbohydrates',
@@ -404,13 +439,11 @@ class _ProductFormScreenState extends State<ProductFormScreen > {
                         enabled: !isSubmitting,
                         textAlign: TextAlign.right,
                         initialValue: form.carbs?.toString(),
-                        onChanged: (String? value) =>
-                        form.carbs = value,
+                        onChanged: (String? value) => form.carbs = value,
                         validator: _doubleFieldValidator(true),
                       ),
                       TextFormField(
-                        keyboardType: TextInputType.numberWithOptions(
-                            decimal: true),
+                        keyboardType: TextInputType.numberWithOptions(decimal: true),
                         inputFormatters: amountFormatters,
                         decoration: const InputDecoration(
                           labelText: 'Protein',
@@ -420,13 +453,11 @@ class _ProductFormScreenState extends State<ProductFormScreen > {
                         enabled: !isSubmitting,
                         textAlign: TextAlign.right,
                         initialValue: form.protein?.toString(),
-                        onChanged: (String? value) =>
-                        form.protein = value,
+                        onChanged: (String? value) => form.protein = value,
                         validator: _doubleFieldValidator(true),
                       ),
                       TextFormField(
-                        keyboardType: TextInputType.numberWithOptions(
-                            decimal: true),
+                        keyboardType: TextInputType.numberWithOptions(decimal: true),
                         inputFormatters: amountFormatters,
                         decoration: const InputDecoration(
                           labelText: 'Fat',
@@ -436,8 +467,7 @@ class _ProductFormScreenState extends State<ProductFormScreen > {
                         enabled: !isSubmitting,
                         textAlign: TextAlign.right,
                         initialValue: form.fat?.toString(),
-                        onChanged: (String? value) =>
-                        form.fat = value,
+                        onChanged: (String? value) => form.fat = value,
                         validator: _doubleFieldValidator(true),
                       ),
                     ],

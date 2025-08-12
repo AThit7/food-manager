@@ -4,12 +4,6 @@ import '../../domain/models/product/external_product.dart';
 import '../../domain/models/product/product_result.dart';
 
 class ProductInfoService{
-  final _configuration  = ProductQueryConfiguration(
-        "",
-        language: OpenFoodFactsLanguage.ENGLISH,
-        version: ProductQueryVersion.v3,
-      );
-
   void init(){
     OpenFoodAPIConfiguration.globalLanguages = <OpenFoodFactsLanguage>[
       OpenFoodFactsLanguage.ENGLISH,
@@ -32,6 +26,7 @@ class ProductInfoService{
     final externalProduct = ExternalProduct(
       barcode:  product.barcode,
       name: product.getBestProductName(OpenFoodFactsLanguage.ENGLISH),
+      tag: product.categories?.split(", ").last, // TODO is this field good?
       referenceUnit: match?.group(0),
       containerSize: product.packagingQuantity,
       calories: product.nutriments?.getValue(Nutrient.energyKCal, size),

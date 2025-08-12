@@ -3,11 +3,13 @@ import '../../core/exceptions/exceptions.dart';
 
 class PantryItemValidator{
   static bool _isValidDouble(double value, [bool canBeZero = false]) {
-    return value.isFinite && !value.isNaN && !value.isNegative &&
-        (canBeZero || value > 0);
+    return value.isFinite && !value.isNaN && !value.isNegative && (canBeZero || value > 0);
   }
 
   static void validate(PantryItem item) {
+    if (item.uuid.isEmpty) {
+      throw ValidationError("Invalid uid."); // TODO add UUID regex?
+    }
     if (!_isValidDouble(item.quantity)) {
       throw ValidationError("Invalid quantity.");
     }

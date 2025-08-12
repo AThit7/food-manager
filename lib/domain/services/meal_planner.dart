@@ -9,20 +9,37 @@ import 'package:food_manager/domain/models/recipe.dart';
 import 'package:collection/collection.dart';
 
 
-double _pantryItemScore(PantryItem item, DateTime date, int maxShelfLifeDays) {
-  int expires;
+int _leadDays(int d) {
+  if (d == 0) return 0;
+  if (d <= 3)  return 1;
+  if (d <= 7)  return 2;
+  if (d <= 14) return 4;
+  if (d <= 30) return 7;
+  return 14;
+}
 
-  if (item.isOpen) {
-    expires = item.expirationDate.difference(date).inDays;
-  } else {
-    expires = item.product.shelfLifeAfterOpening ?? maxShelfLifeDays;
-  }
+int _effectiveShelfLifeAfterOpening(int afterOpen, int expected) {
+  final needsLead = (afterOpen == expected) && afterOpen > 0;
+  if (!needsLead) return afterOpen;
+  final lead = _leadDays(afterOpen);
+  assert(lead <= afterOpen);
+  return afterOpen - lead;
+}
 
-  final penaltyA = item.isOpen ? 1.0 : 0.9;
+double _pantryItemScore(PantryItem item, DateTime date) {
+  final unopenedDaysLeft = max(0, item.expirationDate.difference(date).inDays);
+  final afterOpen = item.product.shelfLifeAfterOpening;
 
-  final score = penaltyA / expires;
+  // effective days left if we were to use it now
+  final effectiveDaysLeft = item.isOpen
+      ? unopenedDaysLeft                  // already opened: exp is post-open
+      : min(unopenedDaysLeft, afterOpen); // unopened: opening can't extend life
 
-  return score;
+  // prefer opened items, but keep unopened urgency meaningful
+  final coeff = item.isOpen ? 1.0 : 0.4;
+
+  // Per-unit urgency; avoid dividing by 0
+  return coeff / (1 + effectiveDaysLeft);
 }
 
 // _PlanStep should be lightweight as we'll have many of those, _PantryState and _PlanState can be bloated
@@ -38,27 +55,35 @@ class _PantryState {
 
   List<PantryItem>? getItems(String tag) => _items[tag];
 
-  _PantryState copyAndUpdate(Map<PantryItem, double> items, double epsilon, DateTime date, int maxShelfLifeDays) {
+  _PantryState copyAndUpdate(Map<PantryItem, double> items, double epsilon, DateTime date) {
     final newItems = {for (final entry in _items.entries) entry.key: List.of(entry.value)};
 
     for (final entry in items.entries) {
       final tag = entry.key.product.tag.name;
       final tagItems = newItems[tag];
-      final match = (tagItems ?? []).where((item) => item == entry.key); // TODO: can be change to firstWhere
-      assert(match.length < 2);
-
-      if (match.isNotEmpty) {
-        tagItems!.remove(match.first);
-      }
+      final i = tagItems?.indexWhere((it) => it == entry.key) ?? -1; // faster than removeWhere because items are unique
+      if (i >= 0) tagItems!.removeAt(i);
 
       final remainingQuantity = entry.key.quantity - entry.value;
       if (remainingQuantity > epsilon) {
-        final newItem = entry.key.copyWith(quantity: remainingQuantity);
+        final expirationDateAfterOpening = date.add(Duration(days: entry.key.product.shelfLifeAfterOpening));
+        final newExpirationDate = entry.key.isOpen
+            ? entry.key.expirationDate
+            : (entry.key.expirationDate.isBefore(expirationDateAfterOpening)
+                ? entry.key.expirationDate
+                : expirationDateAfterOpening);
+
+        final newItem = entry.key.copyWith(
+          quantity: remainingQuantity,
+          isOpen: true,
+          expirationDate: newExpirationDate,
+        );
+
         if (tagItems == null) {
           newItems[tag] = [newItem];
         } else {
-          final currentScore = _pantryItemScore(newItem, date, maxShelfLifeDays);
-          final index = tagItems.indexWhere((e) => _pantryItemScore(e, date, maxShelfLifeDays) < currentScore);
+          final currentScore = _pantryItemScore(newItem, date);
+          final index = tagItems.indexWhere((e) => _pantryItemScore(e, date) < currentScore);
           tagItems.insert(index >= 0 ? index : tagItems.length, newItem);
         }
       }
@@ -67,6 +92,7 @@ class _PantryState {
     return _PantryState._(newItems);
   }
 
+  // remove items expiring before the date; items expiring on date are still good
   double removeExpired(DateTime date) {
     double waste = 0;
 
@@ -74,9 +100,6 @@ class _PantryState {
       for (final item in items) {
         if(item.expirationDate.isBefore(date)) waste += item.quantity;
       }
-    }
-
-    for (final items in _items.values) {
       items.removeWhere((item) => item.expirationDate.isBefore(date));
     }
 
@@ -87,6 +110,8 @@ class _PantryState {
 class _PlanState {
   final Set<Recipe> chosenRecipes;
   final _PantryState pantry;
+  final _PlanStep lastStep;
+  final DateTime date;
   final double waste;
   final double score;
   final double calories;
@@ -97,6 +122,8 @@ class _PlanState {
   _PlanState({
     required this.chosenRecipes,
     required this.pantry,
+    required this.lastStep,
+    required this.date,
     required this.waste,
     required this.score,
     required this.calories,
@@ -105,7 +132,7 @@ class _PlanState {
     required this.fat,
   });
 
-  factory _PlanState.fromStep(_PlanStep step, _PantryState pantry, double epsilon, DateTime date, int maxShelfLife) {
+  factory _PlanState.fromStep(_PlanStep step, _PantryState pantry, double epsilon, DateTime date) {
     final items = <PantryItem, double>{};
     final recipes = <Recipe>{};
     double totalScore = 0;
@@ -115,7 +142,7 @@ class _PlanState {
     double fat = 0;
 
     for (_PlanStep? currentStep = step; currentStep != null; currentStep = currentStep.parent) {
-      assert(step.recipe != null);
+      assert(currentStep.parent == null || currentStep.recipe != null); // recipe can only be null in root step
       if (currentStep.recipe == null) continue;
 
       recipes.add(currentStep.recipe!);
@@ -134,12 +161,14 @@ class _PlanState {
       }
     }
 
-    final newPantry = pantry.copyAndUpdate(items, epsilon, date, maxShelfLife);
+    final newPantry = pantry.copyAndUpdate(items, epsilon, date);
     final waste = newPantry.removeExpired(date);
 
     return _PlanState(
       chosenRecipes: recipes,
       pantry: newPantry,
+      lastStep: step,
+      date: date,
       waste: waste,
       score: totalScore,
       calories: calories,
@@ -165,15 +194,18 @@ class _PlanStep {
   });
 }
 
+// TODO:
+// add DB stuff
+// add Result wrapper like for repos
 class MealPlanner {
   MealPlanner({required this.config});
 
+  // TODO move this to the config class once everything is working
   final MealPlannerConfig config;
   final int maxRecipePoolSize = 20;
   final int planLength = 14;
   final int wasteArrayLength = 10;
   final double acceptableError = 0.05;
-  final int maxShelfLifeDays = 99999;
   final double epsilon = 0.005;
   final double frequencyWeight = 0;
   final double recencyWeight = 0;
@@ -191,11 +223,8 @@ class MealPlanner {
     final today = DateTime.now();
     // TODO:
     // add recipe.last_time_used
-    // add tag-product map
-    // add tag-pantry_item(s) map
-    // days_before-expires-{qt_sum, [{quantity, item}]} map
     // deep copy the currentPLan first?
-    // remove expired pantry items?
+    // remove expired pantry items? already done but maybe rethink it
 
     // ##################################################### PREPARE AUXILIARY TAG-[PRODUCT] MAP
 
@@ -208,11 +237,15 @@ class MealPlanner {
       }
     }
 
+    for (final productList in tagProductsMap.values) {
+      productList.sort((a, b) => (a.containerSize ?? -1).compareTo(b.containerSize ?? -1));
+    }
+
     // ##################################################### PREPARE AUXILIARY TAG-[PANTRY ITEM] MAP
 
     final Map<String, List<PantryItem>> tagPantryItemsMap = {};
     for (final item in pantryItems) {
-      if (tagProductsMap.containsKey(item.product.tag.name)) {
+      if (tagPantryItemsMap.containsKey(item.product.tag.name)) {
         tagPantryItemsMap[item.product.tag.name]!.add(item);
       } else {
         tagPantryItemsMap[item.product.tag.name] = [item];
@@ -220,201 +253,247 @@ class MealPlanner {
     }
 
     for (final pantryItemList in tagPantryItemsMap.values) {
-      pantryItemList.sort((a, b) {
-        int expiresA;
-        int expiresB;
-
-        if (a.isOpen) {
-          expiresA = a.expirationDate.difference(currentPlan.dayZero).inDays;
-        } else {
-          expiresA = a.product.shelfLifeAfterOpening ?? maxShelfLifeDays;
-        }
-
-        if (b.isOpen) {
-          expiresB = b.expirationDate.difference(currentPlan.dayZero).inDays;
-        } else {
-          expiresB = b.product.shelfLifeAfterOpening ?? maxShelfLifeDays;
-        }
-
-        final penaltyA = a.isOpen ? 1.0 : 0.9;
-        final penaltyB = b.isOpen ? 1.0 : 0.9;
-
-        final scoreA = penaltyA / expiresA;
-        final scoreB = penaltyB / expiresB;
-
-        return scoreB.compareTo(scoreA); // descending order
-      });
-    }
-
-    // ##################################################### PREPARE AUXILIARY PRODUCT-[PANTRY ITEM] MAP
-
-    final Map<int, List<PantryItem>> productPantryItemsMap = {};
-    for (final pantryItem in pantryItems) {
-      if (pantryItem.product.id == null) {
-        throw ArgumentError("Product without an id was used.");
-      }
-
-      if (productPantryItemsMap.containsKey(pantryItem.product.id)) {
-        productPantryItemsMap[pantryItem.product.id]!.add(pantryItem);
-      } else {
-        productPantryItemsMap[pantryItem.product.id!] = [pantryItem];
-      }
-    }
-
-    for (final pantryItemList in productPantryItemsMap.values) {
-      pantryItemList.sort((a, b) => a.expirationDate.compareTo(b.expirationDate));
-    }
-
-    // ##################################################### POPULATE WASTE ARRAY
-    // TODO: how to incorporate it in the scoring? so far it's useless
-
-    // remove days before today and add new ones
-    currentPlan.clearPastDays(today);
-
-    // add all the expiring products to the waste table
-    final List<double> wasteByDay = List.generate(wasteArrayLength + 1, (_) => 0);
-    for (final pantryItem in pantryItems) {
-      final expiresIn = pantryItem.expirationDate.difference(today).inDays;
-      final index = min(expiresIn, wasteArrayLength);
-      wasteByDay[index] += pantryItem.quantity;
-    }
-
-    // go over the plan and subtract the items that will be used as they won't be wasted
-    for (int day = 0; day < currentPlan.plan.length; day++) {
-      wasteByDay[day] -= currentPlan.plan[day].totalQuantity;
+      pantryItemList.sort((a, b) => _pantryItemScore(b, today).compareTo(_pantryItemScore(a, today)));  // desc. order
     }
 
     // ##################################################### RANK RECIPES
 
     List<_PlanStep> expandPlan(_PlanState planState) {
-      final recipeRanking = <({double score, Recipe recipe, List<({PantryItem item, double quantity})> pickedItems})>[];
-      double bestScore = double.negativeInfinity;
       final pantry = planState.pantry.clone();
+      final resultList = <_PlanStep>[];
 
       recipesLoop:
       for (final recipe in recipes) {
         if (planState.chosenRecipes.contains(recipe)) continue;
-        double wasteScore = 0;
+
         final pickedItems = <({PantryItem item, double quantity})>[];
+        final itemsToBuy = <({PantryItem item, double quantity})>[];
+        double totalScore = 0;
 
         for (final recipeIngredient in recipe.ingredients) {
-          final products = tagProductsMap[recipeIngredient.tag.name];
-          final pantryItems = pantry.getItems(recipeIngredient.tag.name) ?? [];
+          final matchingProducts = tagProductsMap[recipeIngredient.tag.name]?.where(
+                  (e) => e.units.containsKey(recipeIngredient.unit)).toList();
+          final pantryItems = pantry.getItems(
+              recipeIngredient.tag.name)?.where((e) => e.product.units.containsKey(recipeIngredient.unit)) ?? [];
 
-          if (products == null) continue recipesLoop; // a recipe with missing ingredients can't be used
+          // a recipe with missing ingredients can't be used
+          if (matchingProducts == null || matchingProducts.isEmpty) continue recipesLoop;
 
           double totalQuantity = 0;
-          double totalScore = 0;
 
-          bool lowerBoundSatisfied = false;
+          bool lowerBoundSatisfied = false; // TODO remove this? it's complicated and awkward
 
           // pick the item(s) that maximizes the cost reduction, they're already sorted
           for (final pantryItem in pantryItems) {
-            final unitConversionRatio = pantryItem.product.units[recipeIngredient.unit];
-            if (unitConversionRatio == null) continue;
+            final ratio = pantryItem.product.units[recipeIngredient.unit]!;
+            final unopenedDaysLeft = max(0, pantryItem.expirationDate.difference(planState.date).inDays);
+            final afterOpenDays = pantryItem.product.shelfLifeAfterOpening;
 
-            final expiresIn = pantryItem.isOpen || pantryItem.product.shelfLifeAfterOpening == null
-                ? currentPlan.dayZero
-                .difference(pantryItem.expirationDate)
-                .inDays
-                : pantryItem.product.shelfLifeAfterOpening!;
+            final daysLeftNow = pantryItem.isOpen
+                ? unopenedDaysLeft                      // already opened: exp is post opening
+                : min(unopenedDaysLeft, afterOpenDays); // unopened: opening can't extend
 
-            assert(expiresIn >= 0);
-            if (expiresIn < 0) continue;
+            final convertedQuantity = pantryItem.quantity / ratio; // in recipe units
+            double need = recipeIngredient.amount - totalQuantity;
+            double takeRecipeUnits = min(convertedQuantity, need);
 
-            final convertedQuantity = pantryItem.quantity / unitConversionRatio;
-            double quantity = min(convertedQuantity, (recipeIngredient.amount - totalQuantity));
-
-            // if the leftover is negligible, just use the whole item
             if (totalQuantity + convertedQuantity <= recipeIngredient.amount * (1 + acceptableError)) {
-              quantity = convertedQuantity;
+              takeRecipeUnits = convertedQuantity; // finish the item if it's within tolerance
             }
 
-            pickedItems.add((item: pantryItem, quantity: quantity * unitConversionRatio));
-            totalScore += quantity / (expiresIn + 1);
-            totalQuantity += quantity;
+            final usedBase = takeRecipeUnits * ratio; // grams/ml
+            final leftoverBase = pantryItem.quantity - usedBase;
+
+            pickedItems.add((item: pantryItem, quantity: usedBase));
+
+            if (pantryItem.isOpen) {
+              totalScore += usedBase / (1 + daysLeftNow);
+            } else {
+              final potentialWaste = max(0.0, leftoverBase); // FP safety
+              totalScore -= potentialWaste / (1 + daysLeftNow);
+            }
+
+            totalQuantity += takeRecipeUnits;
 
             if (totalQuantity >= recipeIngredient.amount * (1 - acceptableError)) {
-              if (lowerBoundSatisfied) {
-                break;
-              } else {
-                lowerBoundSatisfied = true;
-                continue;
-              }
+              if (lowerBoundSatisfied) break;
+              lowerBoundSatisfied = true;
+              continue;
             }
           }
 
-          // TODO we don't want to remove it here yet, do it after picking recipe for the slot, already done?
-          if (pickedItems.isNotEmpty) {
-            assert(pickedItems.length <= pantryItems.length, 'Picked more items than exist in pantry');
-            // remove used up items, if the last item wasn't used up fully change its quantity, otherwise, remove it
-            final lastItemRemainingQuantity = pickedItems.last.item.quantity - pickedItems.last.quantity;
-            if (lastItemRemainingQuantity > epsilon) {
-              pantryItems.removeRange(0, pickedItems.length - 1);
-              pantryItems[0] = pantryItems[0].copyWith(quantity: lastItemRemainingQuantity);
-            } else {
-              pantryItems.removeRange(0, pickedItems.length);
-            }
-          }
+          double remainingQuantityLow = recipeIngredient.amount * (1 - acceptableError) - totalQuantity;
+          double remainingQuantityHigh = recipeIngredient.amount * (1 + acceptableError) - totalQuantity;
+          double remainingQuantity = recipeIngredient.amount - totalQuantity;
 
           // if the total quantity is too small pick the best product that will fill in the gap
-          if (totalQuantity < recipeIngredient.amount * (1 - acceptableError)) {
-            final itemsToBuy = <({PantryItem item, double quantity})>[];
+          if (remainingQuantityLow > 0) {
+            for (final product in matchingProducts) {
+              assert (product.units[recipeIngredient.unit] != null);
+              final unitConversionRatio = product.units[recipeIngredient.unit]!;
 
-            for (final product in products) {
-              // TODO
+              // no container size means we can just pick the remaining quantity
+              if (product.containerSize != null) break;
+
+              final effectiveShelfLife = _effectiveShelfLifeAfterOpening(
+                product.shelfLifeAfterOpening,
+                product.expectedShelfLife,
+              );
+              final expirationDate = planState.date.add(Duration(days: effectiveShelfLife));
+
+              itemsToBuy.add((
+                item: PantryItem(
+                  product: product,
+                  quantity: remainingQuantity * unitConversionRatio,
+                  expirationDate: expirationDate,
+                  isOpen: true,
+                ),
+                quantity: remainingQuantity * unitConversionRatio,
+              ));
+
+              remainingQuantityLow -= remainingQuantity;
+              totalQuantity += remainingQuantity;
+
+              break;
             }
           }
 
-          wasteScore = totalScore;
+          // TODO tweak or optimize?
+          if (remainingQuantityLow > 0) {
+            // because containerSize == null products should precede others
+            final idx = matchingProducts.indexWhere((e) => e.containerSize != null);
+            final productsWithContainerSize = idx == -1 ? const <LocalProduct>[] : matchingProducts.sublist(idx);
+
+            for (final product in productsWithContainerSize.reversed) {
+              assert(product.containerSize != null);
+              final unitConversionRatio = product.units[recipeIngredient.unit];
+              if (unitConversionRatio == null) continue;
+
+              final convertedQuantity = product.containerSize! / unitConversionRatio;
+
+              if (convertedQuantity > remainingQuantityHigh) continue;
+
+              final effectiveShelfLife = _effectiveShelfLifeAfterOpening(
+                product.shelfLifeAfterOpening,
+                product.expectedShelfLife,
+              );
+              final expirationDate = planState.date.add(Duration(days: effectiveShelfLife));
+
+              final count = (remainingQuantity / convertedQuantity).floor();
+
+              itemsToBuy.addAll(
+                List.generate(count, (_) => (
+                  item: PantryItem(
+                    product: product,
+                    quantity: product.containerSize!,
+                    expirationDate: expirationDate,
+                    isOpen: true,
+                  ),
+                  quantity: product.containerSize!,
+                )),
+              );
+
+              final usedUp = convertedQuantity * count;
+              remainingQuantityLow -= usedUp;
+              remainingQuantity -= usedUp;
+              remainingQuantityHigh -= usedUp;
+
+              totalQuantity += usedUp;
+            }
+
+            if (remainingQuantityLow > 0) {
+              if (productsWithContainerSize.isEmpty) continue recipesLoop;
+              final product = productsWithContainerSize.first;
+
+              assert(product.containerSize != null);
+              final unitConversionRatio = product.units[recipeIngredient.unit]!;
+
+              final effectiveShelfLife = _effectiveShelfLifeAfterOpening(
+                product.shelfLifeAfterOpening,
+                product.expectedShelfLife,
+              );
+              final expirationDate = planState.date.add(Duration(days: effectiveShelfLife));
+
+              itemsToBuy.add((
+                item: PantryItem(
+                  product: product,
+                  quantity: product.containerSize!,
+                  expirationDate: expirationDate,
+                  isOpen: true,
+                ),
+                quantity: remainingQuantity * unitConversionRatio,
+              ));
+
+              final usedNow = remainingQuantity * unitConversionRatio;
+              final potentialWaste = max(0, product.containerSize! - usedNow);
+              totalScore -= potentialWaste / (effectiveShelfLife + 1);
+              totalQuantity += remainingQuantity;
+            }
+          }
         }
 
-        // TODO
+        // TODO tweak penalties
         final recencyPenalty = 0;
         final frequencyPenalty = 0;
 
-        final finalScore = wasteScore + recencyPenalty + frequencyPenalty;
-        recipeRanking.add((score: finalScore, recipe: recipe, pickedItems: pickedItems));
+        final finalScore = totalScore + recencyPenalty + frequencyPenalty;
+        pickedItems.addAll(itemsToBuy);
 
-        bestScore = max(bestScore, finalScore); // TODO remove?
-        return [];
+        resultList.add(
+          _PlanStep(
+            parent: planState.lastStep,
+            recipe: recipe,
+            usedItems: pickedItems,
+            score: finalScore,
+          ),
+        );
       }
 
-      return [];
+      return resultList;
     }
 
+    // ##################################################### FIND BEST PLAN
+
     final pantry = _PantryState._(tagPantryItemsMap);
-    DateTime currentDay = today.subtract(Duration(days: 1));
+    DateTime currentDayDate = today.subtract(Duration(days: 1));
 
     for (final day in currentPlan.plan) {
-      currentDay = currentDay.add(Duration(days: 1));
+      currentDayDate = currentDayDate.add(Duration(days: 1));
 
-      // TODO: read current plan first
+      // ############ LOAD RECIPES FROM THE PLAN
+      _PlanStep parentStep = _PlanStep(parent: null, recipe: null, usedItems: [], score: 0);
 
-      final startingStep = _PlanStep(
-        parent: null,
-        recipe: null,
-        usedItems: [],
-        score: 0,
-      );
+      for (final slot in day.recipes) {
+        parentStep = _PlanStep(
+          parent: parentStep,
+          recipe: slot.recipe,
+          usedItems: slot.ingredients.values.flattenedToList,
+          score: 0);
+      }
 
-      final planQueue = PriorityQueue<_PlanStep>((a, b) => a.score.compareTo(b.score));
+      // ############ INITIALIZE THE QUEUE
+      final startingStep = parentStep;
+
+      final planQueue = PriorityQueue<_PlanStep>((a, b) => b.score.compareTo(a.score));
       planQueue.add(startingStep);
 
+      // ############ BEST FIRST SEARCH
       while(planQueue.isNotEmpty) {
+        // ############ LOAD AND RECREATE THE PlanState
         final currentStep = planQueue.first;
         planQueue.removeFirst();
-        final currentState = _PlanState.fromStep(currentStep, pantry, epsilon, currentDay, maxShelfLifeDays);
+        final currentState = _PlanState.fromStep(currentStep, pantry, epsilon, currentDayDate);
 
         bool inRange(double value, ({double lower, double upper}) range) =>
-            range.lower <= value && value < range.upper;
+            range.lower <= value && value <= range.upper;
 
-        // if plan is a valid final plan
+        // ############ IF THE DAILY PLAN SATISFIES THE CRITERIA ADD IT TO THE FINAL PLAN
         if (inRange(currentState.calories, constraints.calorieRange) &&
             inRange(currentState.protein, constraints.proteinRange) &&
             inRange(currentState.carbs, constraints.carbsRange) &&
             inRange(currentState.fat, constraints.fatRange)) {
 
+          // ############ RECREATE THE MAP FOR MealPlanSlot
           for (_PlanStep? step = currentStep; step != null; step = step.parent) {
             assert(step.recipe != null);
             if(step.recipe == null) continue;
@@ -429,16 +508,18 @@ class MealPlanner {
               }
             }
 
+            // ############ ADD THE DAILY PLAN TO FINAL RESULT
             day.addRecipe(step.recipe!, tagIngredientsMap);
           }
-
         }
 
+        // ############ LOAD AND RECREATE THE PlanState
         final newSteps = expandPlan(currentState);
-        planQueue.addAll(newSteps);
+        planQueue.addAll(newSteps); // TODO sort and take top 50 if too costly? (quickselect would be faster)
       }
     }
 
+    // ##################################################### RETURN RESULT
     return currentPlan;
   }
 }

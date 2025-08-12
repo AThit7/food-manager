@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:food_manager/ui/planner/view_models/planner_viewmodel.dart';
 
@@ -33,9 +32,13 @@ class _PlannerScreenState extends State<PlannerScreen> {
       body: ListenableBuilder(
         listenable: viewModel,
         builder: (context, child) {
-          if (!viewModel.isLoaded) {
-            return Center(child: CircularProgressIndicator());
-          } else {
+          if (viewModel.isLoading) {
+            return Center(child: const CircularProgressIndicator());
+          } else if (viewModel.errorMessage != null) {
+            return Center(child: Text(viewModel.errorMessage!));
+          } else if (viewModel.mealPlan != null) {
+            final slot = viewModel.mealPlan!.getDate(selectedDate);
+
             return Padding(
               padding: const EdgeInsets.all(16.0),
               child: ListView(
@@ -63,14 +66,22 @@ class _PlannerScreenState extends State<PlannerScreen> {
                     ],
                   ),
                   SizedBox(height: 8),
-                  Card(child: Text("TODO")),
-                  SizedBox(height: 8),
-                  Card(child: Text("TODO")),
-                  SizedBox(height: 8),
-                  Card(child: Text("TODO")),
+                  if (slot == null)
+                    Center(child: Text("There is no plan for this day"))
+                  else
+                    for (final recipeData in slot.recipes)
+                      Column(
+                        children: [
+                          Card(child: Text(recipeData.recipe.name)),
+                          SizedBox(height: 8),
+                        ],
+                      ),
                 ],
               ),
             );
+          } else {
+            assert(false);
+            return Center(child: Text("Unexpected error"));
           }
         },
       ),

@@ -45,8 +45,8 @@ class ProductFormViewmodel {
         carbs: double.parse(form.carbs!),
         protein: double.parse(form.protein!),
         fat: double.parse(form.fat!),
-        shelfLifeAfterOpening: form.shelfLifeAfterOpening != null
-            ? int.parse(form.shelfLifeAfterOpening!) : null,
+        shelfLifePostOpening: int.parse(form.shelfLifeAfterOpening!),
+        expectedShelfLife: int.parse(form.expectedShelfLife!),
       );
       ProductValidator.validate(product);
     } catch (e) {

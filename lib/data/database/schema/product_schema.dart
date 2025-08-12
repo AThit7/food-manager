@@ -15,6 +15,7 @@ abstract class ProductSchema {
   static const protein = 'protein';
   static const fat = 'fat';
   static const shelfLifeAfterOpening = 'shelf_life_after_opening';
+  static const expectedShelfLife = 'expected_shelf_life';
 
   static const create = '''
     CREATE TABLE $table (
@@ -29,8 +30,9 @@ abstract class ProductSchema {
       $carbs REAL NOT NULL CHECK ($carbs >= 0),
       $protein REAL NOT NULL CHECK ($protein >= 0),
       $fat REAL NOT NULL CHECK ($fat >= 0),
-      $shelfLifeAfterOpening INTEGER CHECK ($shelfLifeAfterOpening >= 0),
-      
+      $shelfLifeAfterOpening INTEGER NOT NULL CHECK ($shelfLifeAfterOpening >= 0),
+      $expectedShelfLife INTEGER NOT NULL CHECK ($expectedShelfLife >= 0),
+
       FOREIGN KEY($tagId)
         REFERENCES ${TagSchema.table}(${TagSchema.id})
         ON DELETE RESTRICT

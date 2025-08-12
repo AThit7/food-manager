@@ -50,7 +50,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
               ),
             );
           } else if (viewModel.product != null) {
-            // TODO: check if containerSize is set and add based on that, probably new form needed
+            // TODO: check if containerSize is set and add based on that, probably new form needed...
+            //  or just prefill amount field? idk
             if (!viewModel.hasNavigated) {
               viewModel.hasNavigated = true;
               WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -58,7 +59,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   context,
                   MaterialPageRoute(
                       builder: (context) =>
-                          PantryItemFormScreen( // TODO new form
+                          PantryItemFormScreen( // TODO new form (did i forgot to delete this?)
                             viewModel: PantryItemFormViewmodel(
                               pantryItemRepository: context.read(),
                               product: viewModel.product!
@@ -68,7 +69,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 );
               });
             }
-            return const Text("TODO");
+            return const SizedBox();
           } else if (viewModel.form != null) {
             // TODO: is this necessary?
             if (!viewModel.hasNavigated) {

@@ -87,7 +87,12 @@ class HomeScreen extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                       builder: (context) {
-                        final viewModel = PlannerViewmodel();
+                        final viewModel = PlannerViewmodel(
+                          mealPlanner: context.read(),
+                          localProductRepository: context.read(),
+                          pantryItemRepository: context.read(),
+                          recipeRepository: context.read(),
+                        );
                         return PlannerScreen(viewModel: viewModel);
                       }
                   ),

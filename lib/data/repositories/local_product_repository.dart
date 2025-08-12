@@ -59,6 +59,7 @@ class LocalProductRepository{
       ProductSchema.protein: product.protein,
       ProductSchema.fat: product.fat,
       ProductSchema.shelfLifeAfterOpening: product.shelfLifeAfterOpening,
+      ProductSchema.expectedShelfLife: product.expectedShelfLife,
     };
   }
 
@@ -88,7 +89,8 @@ class LocalProductRepository{
       carbs: (productMap[ProductSchema.carbs] as num).toDouble(),
       protein: (productMap[ProductSchema.protein] as num).toDouble(),
       fat: (productMap[ProductSchema.fat] as num).toDouble(),
-      shelfLifeAfterOpening: productMap[ProductSchema.shelfLifeAfterOpening] as int?,
+      shelfLifePostOpening: productMap[ProductSchema.shelfLifeAfterOpening] as int,
+      expectedShelfLife: productMap[ProductSchema.expectedShelfLife] as int,
     );
   }
 

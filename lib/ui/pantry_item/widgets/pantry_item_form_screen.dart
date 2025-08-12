@@ -4,6 +4,36 @@ import 'package:flutter/services.dart';
 import '../view_models/pantry_item_form_viewmodel.dart';
 import '../models/pantry_item_form_model.dart';
 
+class _OpenOnBuyHelpSheet extends StatelessWidget {
+  const _OpenOnBuyHelpSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text('“Opens on purchase”', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+            SizedBox(height: 8),
+            Text('Enable this for items typically open/unsealed when you buy them.'),
+            SizedBox(height: 12),
+            Text('Set to TRUE for:'),
+            Text('• Fresh produce sold loose (e.g., strawberries)'),
+            Text('• Bakery bread in paper bags'),
+            SizedBox(height: 8),
+            Text('Set to FALSE for:'),
+            Text('• Factory-sealed items (e.g., yogurt, cans, jars)'),
+            SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class PantryItemFormScreen extends StatefulWidget {
   const PantryItemFormScreen ({
     super.key,
@@ -64,7 +94,7 @@ class _PantryItemFormScreenState extends State<PantryItemFormScreen > {
     } else {
       final quantity = widget.viewModel.product.containerSize ?? widget.viewModel.product.referenceValue;
       final expirationDate = DateTime.now().add(Duration(days: 14));
-      form = PantryItemFormModel(quantity: quantity.toString(), expirationDate: expirationDate);
+      form = PantryItemFormModel(quantity: quantity.toString(), expirationDate: expirationDate, isOpen: false);
     }
     _dateFieldController = TextEditingController(text: form.textExpirationDate);
   }
@@ -90,9 +120,7 @@ class _PantryItemFormScreenState extends State<PantryItemFormScreen > {
           key: _formKey,
           child: ListView(
             children: [
-              // TODO =================================================
-              // Display some product info
-              // TODO =================================================
+              // TODO Display some product info
               Row(
                 children: [
                   Expanded(
@@ -108,7 +136,9 @@ class _PantryItemFormScreenState extends State<PantryItemFormScreen > {
                       onChanged: (String value) {
                         form.quantity = value.isEmpty ? null : value;
                       },
-                      validator: (String? value) { // TODO
+                      validator: (String? value) {
+                        if(!_isValidAmount(form.quantity)) return "Invalid amount";
+                        return null;
                       },
                     ),
                   ),
@@ -146,7 +176,6 @@ class _PantryItemFormScreenState extends State<PantryItemFormScreen > {
                     firstDate: DateTime.now(),
                     lastDate: DateTime(DateTime.now().year + 7),
                   );
-
                   if (picked != null) {
                     setState(() {
                       form.expirationDate = picked;
@@ -154,10 +183,30 @@ class _PantryItemFormScreenState extends State<PantryItemFormScreen > {
                     });
                   }
                 },
-                validator: (String? value) { // TODO
+                validator: (String? value) {
+                  if (form.expirationDate != null) return "Invalid date";
+                  return null;
                 },
               ),
-              // TODO =================================================
+              CheckboxListTile(
+                title: const Text('Opens on purchase'),
+                subtitle: Text(
+                  form.isOpen == true
+                      ? 'Example: fresh strawberries, bakery bread'
+                      : 'Example: yogurt, canned goods',
+                ),
+                value: form.isOpen,
+                onChanged: isSubmitting ? null : (v) => form.isOpen = v ?? false,
+                controlAffinity: ListTileControlAffinity.leading,
+                secondary: IconButton(
+                  icon: const Icon(Icons.info_outline),
+                  tooltip: 'What does this mean?',
+                  onPressed: () {
+                    if (isSubmitting) return;
+                    showModalBottomSheet<void>(context: context, builder: (context) => const _OpenOnBuyHelpSheet());
+                  },
+                ),
+              ),
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16.0),
                 child: ElevatedButton(

@@ -19,20 +19,23 @@ class PantryItemRepository{
   Map<String, dynamic> _pantryItemToMap(PantryItem item) {
     return {
       PantryItemSchema.id: item.id,
+      PantryItemSchema.uuid: item.uuid,
       PantryItemSchema.productId: item.product.id,
       PantryItemSchema.quantity: item.quantity,
-      PantryItemSchema.expirationDate:
-        item.expirationDate?.millisecondsSinceEpoch,
+      PantryItemSchema.expirationDate: item.expirationDate.millisecondsSinceEpoch,
+      PantryItemSchema.isOpen: item.isOpen,
     };
   }
 
   PantryItem _pantryItemFromMap(Map<String, dynamic> itemMap, LocalProduct product) {
-    return PantryItem(
+    return PantryItem.withUuid(
       id: itemMap[PantryItemSchema.id] as int,
+      uuid: itemMap[PantryItemSchema.uuid] as String,
       product: product,
       quantity: itemMap[PantryItemSchema.quantity] as double,
       expirationDate: DateTime.fromMillisecondsSinceEpoch(
           itemMap[PantryItemSchema.expirationDate] as int),
+      isOpen: itemMap[PantryItemSchema.isOpen] as bool,
     );
   }
 
@@ -102,18 +105,20 @@ class PantryItemRepository{
     }
   }
 
-  // TODO define table names and column names
   Future<RepoResult<List<PantryItem>>> listPantryItems() async {
     try {
       const String itemId = "item_id";
       const String productId = "product_id";
       const String tagId = "tag_id";
       const String tagName = "tag_name";
+
       final List<Map<String, Object?>> rows = await _db.rawQuery('''
       SELECT 
         i.${PantryItemSchema.id} AS $itemId,
+        i.${PantryItemSchema.uuid},
         i.${PantryItemSchema.quantity},
         i.${PantryItemSchema.expirationDate},
+        i.${PantryItemSchema.isOpen},
         p.${ProductSchema.id} AS $productId,
         p.${ProductSchema.name},
         p.${ProductSchema.barcode},
@@ -146,17 +151,18 @@ class PantryItemRepository{
           carbs: row[ProductSchema.carbs] as double,
           protein: row[ProductSchema.protein] as double,
           fat: row[ProductSchema.fat] as double,
-          shelfLifeAfterOpening: row[ProductSchema
-              .shelfLifeAfterOpening] as int?,
+          shelfLifePostOpening: row[ProductSchema.shelfLifeAfterOpening] as int,
+          expectedShelfLife: row[ProductSchema.expectedShelfLife] as int,
           units: {},
         );
 
-        return PantryItem(
+        return PantryItem.withUuid(
           id: row[itemId] as int,
+          uuid: row[PantryItemSchema.uuid] as String,
           product: product,
           quantity: row[PantryItemSchema.quantity] as double,
-          expirationDate: DateTime.fromMillisecondsSinceEpoch(
-              row[PantryItemSchema.expirationDate] as int),
+          expirationDate: DateTime.fromMillisecondsSinceEpoch(row[PantryItemSchema.expirationDate] as int),
+          isOpen: row[PantryItemSchema.isOpen] as bool,
         );
       }).toList();
 
@@ -173,18 +179,21 @@ class PantryItemRepository{
     }
   }
 
-  // TODO define table names and column names
+  // TODO fetch units too
   Future<RepoResult<PantryItem>> getPantryItem(int id) async {
     try {
       const String itemId = "item_id";
       const String productId = "product_id";
       const String tagId = "tag_id";
       const String tagName = "tag_name";
+
       final List<Map<String, Object?>> rows = await _db.rawQuery('''
       SELECT 
         i.${PantryItemSchema.id} AS $itemId,
+        i.${PantryItemSchema.uuid},
         i.${PantryItemSchema.quantity},
         i.${PantryItemSchema.expirationDate},
+        i.${PantryItemSchema.isOpen},
         p.${ProductSchema.id} AS $productId,
         p.${ProductSchema.name},
         p.${ProductSchema.barcode},
@@ -223,7 +232,8 @@ class PantryItemRepository{
         carbs: row[ProductSchema.carbs] as double,
         protein: row[ProductSchema.protein] as double,
         fat: row[ProductSchema.fat] as double,
-        shelfLifeAfterOpening: row[ProductSchema.shelfLifeAfterOpening] as int?,
+        shelfLifePostOpening: row[ProductSchema.shelfLifeAfterOpening] as int,
+        expectedShelfLife: row[ProductSchema.expectedShelfLife] as int,
         units: {},
       );
 

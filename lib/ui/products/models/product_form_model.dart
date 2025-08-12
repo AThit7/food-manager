@@ -3,19 +3,18 @@ import '../../../domain/models/product/local_product.dart';
 
 class ProductFormModel {
   int? id;
-  String? barcode, name, tag, referenceUnit, referenceValue,
-      containerSize, calories, carbs, protein, fat, shelfLifeAfterOpening;
+  String? barcode, name, tag, referenceUnit, referenceValue, containerSize, calories, carbs, protein, fat,
+      shelfLifeAfterOpening, expectedShelfLife;
   Map<String, double>? units;
 
-  ProductFormModel({this.id, this. barcode, this.name, this.tag,
-    this.referenceUnit, this.referenceValue, this.containerSize, this.calories,
-    this.carbs, this.protein, this.fat, this.shelfLifeAfterOpening,
-    this.units});
+  ProductFormModel({this.id, this. barcode, this.name, this.tag, this.referenceUnit, this.referenceValue,
+    this.containerSize, this.calories, this.carbs, this.protein, this.fat, this.shelfLifeAfterOpening,
+    this.expectedShelfLife, this.units});
 
-  // TODO add some tag?
   ProductFormModel.fromExternalProduct(ExternalProduct product) {
     barcode = product.barcode;
     name = product.name;
+    tag = product.tag;
     referenceUnit = product.referenceUnit ?? "g";
     referenceValue = (100.0).toString();
     containerSize = product.containerSize?.toString();
@@ -38,7 +37,8 @@ class ProductFormModel {
     carbs = product.carbs.toString();
     protein = product.protein.toString();
     fat = product.fat.toString();
-    shelfLifeAfterOpening = product.shelfLifeAfterOpening?.toString();
+    shelfLifeAfterOpening = product.shelfLifeAfterOpening.toString();
+    expectedShelfLife = product.expectedShelfLife.toString();
     units = Map.of(product.units);
   }
 
@@ -55,6 +55,7 @@ class ProductFormModel {
     String? protein,
     String? fat,
     String? shelfLifeAfterOpening,
+    String? expectedShelfLife,
     Map<String, double>? units,
   }) {
     return ProductFormModel(
@@ -69,8 +70,8 @@ class ProductFormModel {
       carbs: carbs ?? this.carbs,
       protein: protein ?? this.protein,
       fat: fat ?? this.fat,
-      shelfLifeAfterOpening:shelfLifeAfterOpening ??
-          this.shelfLifeAfterOpening,
+      shelfLifeAfterOpening: shelfLifeAfterOpening ?? this.shelfLifeAfterOpening,
+      expectedShelfLife: expectedShelfLife ?? this.expectedShelfLife,
       units: units ?? (this.units != null ? Map.of(this.units!) : null),
     );
   }

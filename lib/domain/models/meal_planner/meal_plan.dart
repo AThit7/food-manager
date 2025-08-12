@@ -21,6 +21,12 @@ class MealPlan {
     dayZero = newDayZero;
   }
 
+  MealPlanSlot? getDate(DateTime date) {
+    final index = date.difference(dayZero).inDays;
+    if (index < 0 || index >= plan.length) return null;
+    return plan[index];
+  }
+
   // TODO: do we need those?
   double getKcalDate(DateTime date) => getKcalDay(date.difference(dayZero).inDays);
 
