@@ -9,6 +9,7 @@ class PantryItem {
   final double quantity;
   final DateTime expirationDate;
   final bool isOpen;
+  final bool isBought;
 
   PantryItem({
     this.id,
@@ -16,16 +17,18 @@ class PantryItem {
     required this.quantity,
     required this.expirationDate,
     required this.isOpen,
+    required this.isBought,
   }) : uuid = const Uuid().v4();
 
   PantryItem.withUuid({
     this.id,
-    required this.uuid,
+    required String? uuid,
     required this.product,
     required this.quantity,
     required this.expirationDate,
     required this.isOpen,
-  });
+    required this.isBought,
+  }) : uuid = uuid ?? const Uuid().v4() ;
 
   PantryItem copyWith({
     int? id,
@@ -33,6 +36,7 @@ class PantryItem {
     double? quantity,
     DateTime? expirationDate,
     bool? isOpen,
+    bool? isBought,
   }) {
     return PantryItem.withUuid(
       id: id ?? this.id,
@@ -41,6 +45,7 @@ class PantryItem {
       quantity: quantity ?? this.quantity,
       expirationDate: expirationDate ?? this.expirationDate,
       isOpen: isOpen ?? this.isOpen,
+      isBought: isBought ?? this.isBought,
     );
   }
 

@@ -4,36 +4,6 @@ import 'package:flutter/services.dart';
 import '../view_models/pantry_item_form_viewmodel.dart';
 import '../models/pantry_item_form_model.dart';
 
-class _OpenOnBuyHelpSheet extends StatelessWidget {
-  const _OpenOnBuyHelpSheet();
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            Text('“Opens on purchase”', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-            SizedBox(height: 8),
-            Text('Enable this for items typically open/unsealed when you buy them.'),
-            SizedBox(height: 12),
-            Text('Set to TRUE for:'),
-            Text('• Fresh produce sold loose (e.g., strawberries)'),
-            Text('• Bakery bread in paper bags'),
-            SizedBox(height: 8),
-            Text('Set to FALSE for:'),
-            Text('• Factory-sealed items (e.g., yogurt, cans, jars)'),
-            SizedBox(height: 12),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class PantryItemFormScreen extends StatefulWidget {
   const PantryItemFormScreen ({
     super.key,
@@ -94,7 +64,12 @@ class _PantryItemFormScreenState extends State<PantryItemFormScreen > {
     } else {
       final quantity = widget.viewModel.product.containerSize ?? widget.viewModel.product.referenceValue;
       final expirationDate = DateTime.now().add(Duration(days: 14));
-      form = PantryItemFormModel(quantity: quantity.toString(), expirationDate: expirationDate, isOpen: false);
+      form = PantryItemFormModel(
+        quantity: quantity.toString(),
+        expirationDate: expirationDate,
+        isOpen: false,
+        isBought: true,
+      );
     }
     _dateFieldController = TextEditingController(text: form.textExpirationDate);
   }
@@ -148,10 +123,11 @@ class _PantryItemFormScreenState extends State<PantryItemFormScreen > {
                       decoration: InputDecoration(
                         labelText: 'Unit',
                         border: OutlineInputBorder(),
+                        enabled: !isSubmitting,
                       ),
                       value: product.referenceUnit,
                       items: units,
-                      onChanged: (value) {
+                      onChanged: isSubmitting ? null : (value) {
                         setState(() {
                           form.unit = value!;
                         });
@@ -169,6 +145,7 @@ class _PantryItemFormScreenState extends State<PantryItemFormScreen > {
                   suffixIcon: Icon(Icons.calendar_month),
                 ),
                 readOnly: true,
+                enabled: !isSubmitting,
                 onTap: () async {
                   final picked = await showDatePicker(
                     context: context,
@@ -184,38 +161,33 @@ class _PantryItemFormScreenState extends State<PantryItemFormScreen > {
                   }
                 },
                 validator: (String? value) {
-                  if (form.expirationDate != null) return "Invalid date";
+                  if (form.expirationDate == null) return "Invalid date";
                   return null;
                 },
               ),
               CheckboxListTile(
-                title: const Text('Opens on purchase'),
+                title: const Text('Is open'),
                 subtitle: Text(
                   form.isOpen == true
-                      ? 'Example: fresh strawberries, bakery bread'
-                      : 'Example: yogurt, canned goods',
+                      ? 'Example: opened yogurt, fresh strawberries'
+                      : 'Example: sealed yogurt, canned goods',
                 ),
                 value: form.isOpen,
-                onChanged: isSubmitting ? null : (v) => form.isOpen = v ?? false,
+                onChanged: isSubmitting ? null : (v) {
+                  setState(() =>form.isOpen = v ?? false);
+                },
                 controlAffinity: ListTileControlAffinity.leading,
-                secondary: IconButton(
-                  icon: const Icon(Icons.info_outline),
-                  tooltip: 'What does this mean?',
-                  onPressed: () {
-                    if (isSubmitting) return;
-                    showModalBottomSheet<void>(context: context, builder: (context) => const _OpenOnBuyHelpSheet());
-                  },
-                ),
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16.0),
                 child: ElevatedButton(
                   onPressed: isSubmitting ? null : () async {
                     // validate returns true if the form is valid
+                    setState(() => isSubmitting = true);
+
                     if (_formKey.currentState!.validate()) {
                       _formKey.currentState!.save();
 
-                      setState(() => isSubmitting = true);
                       final result = await widget.viewModel.savePantryItem(form.copyWith());
                       if (!context.mounted) return;
 
@@ -229,9 +201,8 @@ class _PantryItemFormScreenState extends State<PantryItemFormScreen > {
                         case InsertRepoFailure():
                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Unexpected error.")));
                       }
-
-                      setState(() => isSubmitting = false);
                     }
+                    setState(() => isSubmitting = false);
                   },
                   child: isSubmitting
                       ? Transform.scale(scale: 0.5, child: CircularProgressIndicator())

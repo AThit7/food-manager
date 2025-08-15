@@ -1,29 +1,27 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SharedPreferencesService {
-  late final SharedPreferences _prefs;
+  SharedPreferences? _prefs;
+  SharedPreferences get _safe => _prefs ?? (throw StateError('Call init() first.'));
+
+  static const _scannerType = "scanner_type";
+  static const _upperMealCount = "upper_meal_count";
+  static const _lowerMealCount = "lower_meal_count";
+
+  static const _defaultScannerType = "ml-kit";
+  static const _defaultUpperMealCount = 5;
+  static const _defaultLowerMealCount = 3;
 
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
-
-    if(!_prefs.containsKey('scannerType')) {
-      _prefs.setString('scannerType', 'ml-kit');
-    }
-
-    if(!_prefs.containsKey('preferredUnits')) {
-      _prefs.setString('preferredUnits', 'metric');
-    }
   }
 
-  void saveString(String key, String value) {
-    _prefs.setString(key, value);
-  }
+  String get scannerType => _safe.getString(_scannerType) ?? _defaultScannerType;
+  Future<void> setScannerType(String v) => _safe.setString(_scannerType, v);
 
-  String? getString(String key) {
-    return _prefs.getString(key);
-  }
+  int get upperMealCount => _safe.getInt(_upperMealCount) ?? _defaultUpperMealCount;
+  Future<void> setUpperMealCount(int v) => _safe.setInt(_upperMealCount, v);
 
-  void remove(String key) {
-    _prefs.remove(key);
-  }
+  int get lowerMealCount => _safe.getInt(_lowerMealCount) ?? _defaultLowerMealCount;
+  Future<void> setLowerMealCount(int v) => _safe.setInt(_lowerMealCount, v);
 }

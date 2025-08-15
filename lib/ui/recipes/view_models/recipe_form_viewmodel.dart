@@ -90,6 +90,8 @@ class RecipeFormViewmodel extends ChangeNotifier {
         ingredients: recipeIngredients,
         preparationTime: int.parse(form.preparationTime!),
         instructions: form.instructions,
+        timesUsed: form.timesUsed ?? 0,
+        lastTimeUsed: form.lastTimeUsed,
       );
 
       RecipeValidator.validate(recipe);
@@ -130,6 +132,7 @@ class RecipeFormViewmodel extends ChangeNotifier {
     final result = await _tagRepository.getTagUnitsMap();
     _errorMessage = null;
     _tagUnitsMap = {};
+    notifyListeners();
 
     switch (result) {
       case RepoSuccess():

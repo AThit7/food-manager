@@ -21,12 +21,17 @@ class ScannerScreen extends StatefulWidget {
 // TODO: change to stateless
 class _ScannerScreenState extends State<ScannerScreen> {
   Barcode? _barcode;
-  final MobileScannerController scannerController = MobileScannerController();
+  final MobileScannerController scannerController = MobileScannerController(
+    detectionSpeed: DetectionSpeed.noDuplicates,
+    detectionTimeoutMs: 500,
+  );
+
+  bool _isHandling = false;
 
   Widget _buildBarcode(Barcode? value) {
     if (value == null) {
       return const Text(
-        'Scan something!',
+        'Scan something',
         overflow: TextOverflow.fade,
         style: TextStyle(color: Colors.white),
       );
@@ -40,29 +45,39 @@ class _ScannerScreenState extends State<ScannerScreen> {
   }
 
   void Function(BarcodeCapture)? _handleBarcode(BuildContext context) =>
-    (BarcodeCapture barcodes) async {
-      if (!mounted) return;
+          (BarcodeCapture barcodes) async {
+        if (!mounted || _isHandling) return;
+        _isHandling = true;
 
-      setState(() {
-        _barcode = barcodes.barcodes.firstOrNull;
-      });
+        setState(() {
+          _barcode = barcodes.barcodes.firstOrNull;
+        });
 
-      String? barcode = barcodes.barcodes.first.displayValue;
-      if (barcode == null) return;
+        String? barcode = barcodes.barcodes.first.displayValue;
+        if (barcode == null) {
+          _isHandling = false;
+          return;
+        }
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => AddProductScreen(
-            viewModel: AddProductViewmodel(
-              barcode: barcode,
-              localProductRepository: context.read(),
-              externalProductRepository: context.read(),
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AddProductScreen(
+              viewModel: AddProductViewmodel(
+                barcode: barcode,
+                localProductRepository: context.read(),
+                externalProductRepository: context.read(),
+              ),
             ),
           ),
-        ),
-      );
-    };
+        );
+      };
+
+  @override
+  void dispose() {
+    scannerController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

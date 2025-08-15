@@ -10,6 +10,11 @@ class LocalProduct {
   final double? containerSize;
   final int expectedShelfLife, shelfLifeAfterOpening;
 
+  double get caloriesPerUnit => calories / referenceValue;
+  double get proteinPerUnit => protein / referenceValue;
+  double get carbsPerUnit => carbs / referenceValue;
+  double get fatPerUnit => fat / referenceValue;
+
   LocalProduct({
     required this.name,
     required this.tag,

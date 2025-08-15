@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:developer' as dev;
 
 import 'package:food_manager/domain/models/meal_planner/meal_plan.dart';
 import 'package:food_manager/domain/models/meal_planner/meal_plan_constraints.dart';
@@ -154,10 +155,10 @@ class _PlanState {
 
         items[entry.item] = (items[entry.item] ?? 0) + quantity;
 
-        calories += product.calories * quantity;
-        protein += product.protein * quantity;
-        carbs += product.carbs * quantity;
-        fat += product.fat * quantity;
+        calories += product.caloriesPerUnit * quantity;
+        protein += product.proteinPerUnit * quantity;
+        carbs += product.carbsPerUnit * quantity;
+        fat += product.fatPerUnit * quantity;
       }
     }
 
@@ -184,7 +185,7 @@ class _PlanStep {
   final Recipe? recipe;
   final double score;
 
-  final List<({PantryItem item, double quantity})> usedItems;
+  final List<({PantryItem item, double quantity})> usedItems; // TODO growable:false
 
   _PlanStep({
     required this.parent,
@@ -220,11 +221,14 @@ class MealPlanner {
     required MealPlanConstraints constraints,
     required MealPlan currentPlan,
   }) {
-    final today = DateTime.now();
     // TODO:
     // add recipe.last_time_used
     // deep copy the currentPLan first?
     // remove expired pantry items? already done but maybe rethink it
+
+    final tmp = DateTime.now();
+    final today = DateTime(tmp.year, tmp.month, tmp.day);
+    currentPlan.clearPastDays(today, planLength);
 
     // ##################################################### PREPARE AUXILIARY TAG-[PRODUCT] MAP
 
@@ -347,6 +351,7 @@ class MealPlanner {
                   quantity: remainingQuantity * unitConversionRatio,
                   expirationDate: expirationDate,
                   isOpen: true,
+                  isBought: false,
                 ),
                 quantity: remainingQuantity * unitConversionRatio,
               ));
@@ -388,6 +393,7 @@ class MealPlanner {
                     quantity: product.containerSize!,
                     expirationDate: expirationDate,
                     isOpen: true,
+                    isBought: false,
                   ),
                   quantity: product.containerSize!,
                 )),
@@ -420,6 +426,7 @@ class MealPlanner {
                   quantity: product.containerSize!,
                   expirationDate: expirationDate,
                   isOpen: true,
+                  isBought: false,
                 ),
                 quantity: remainingQuantity * unitConversionRatio,
               ));
@@ -457,18 +464,23 @@ class MealPlanner {
     final pantry = _PantryState._(tagPantryItemsMap);
     DateTime currentDayDate = today.subtract(Duration(days: 1));
 
-    for (final day in currentPlan.plan) {
+    mainLoop:
+    for (int i = 0; i < currentPlan.length; i++) {
+      final day = currentPlan.plan[i];
       currentDayDate = currentDayDate.add(Duration(days: 1));
+
+      dev.log("Generating plan for ${currentDayDate.toString().split(" ").firstOrNull}");
 
       // ############ LOAD RECIPES FROM THE PLAN
       _PlanStep parentStep = _PlanStep(parent: null, recipe: null, usedItems: [], score: 0);
 
-      for (final slot in day.recipes) {
+      for (final slot in day) {
         parentStep = _PlanStep(
           parent: parentStep,
           recipe: slot.recipe,
           usedItems: slot.ingredients.values.flattenedToList,
-          score: 0);
+          score: 0,
+        );
       }
 
       // ############ INITIALIZE THE QUEUE
@@ -484,18 +496,23 @@ class MealPlanner {
         planQueue.removeFirst();
         final currentState = _PlanState.fromStep(currentStep, pantry, epsilon, currentDayDate);
 
-        bool inRange(double value, ({double lower, double upper}) range) =>
+        dev.log("current state: [${currentState.calories} kcal]");
+
+        bool inRange(num value, ({num lower, num upper}) range) =>
             range.lower <= value && value <= range.upper;
 
         // ############ IF THE DAILY PLAN SATISFIES THE CRITERIA ADD IT TO THE FINAL PLAN
-        if (inRange(currentState.calories, constraints.calorieRange) &&
+        if (//*inRange(currentState.chosenRecipes.length, currentPlan.mealsPerDayRange) && // TODO
+            inRange(currentState.calories, constraints.calorieRange) &&
             inRange(currentState.protein, constraints.proteinRange) &&
             inRange(currentState.carbs, constraints.carbsRange) &&
             inRange(currentState.fat, constraints.fatRange)) {
 
           // ############ RECREATE THE MAP FOR MealPlanSlot
+          final slots = <MealPlanSlot>[];
+
           for (_PlanStep? step = currentStep; step != null; step = step.parent) {
-            assert(step.recipe != null);
+            assert(step.recipe != null || step.parent == null);
             if(step.recipe == null) continue;
             final tagIngredientsMap = <String, List<({PantryItem item, double quantity})>>{};
 
@@ -509,14 +526,31 @@ class MealPlanner {
             }
 
             // ############ ADD THE DAILY PLAN TO FINAL RESULT
-            day.addRecipe(step.recipe!, tagIngredientsMap);
+            slots.add(MealPlanSlot(
+              recipe: step.recipe!,
+              ingredients: tagIngredientsMap,
+              calories: currentState.calories,
+              protein: currentState.protein,
+              carbs: currentState.carbs,
+              fat: currentState.fat,
+              isEaten: false,
+              isValid: true,
+            ));
           }
+          currentPlan.plan[i] = slots;
+          currentPlan.waste[i] = currentState.waste;
+
+          continue mainLoop;
+        } else if (currentState.chosenRecipes.length >= currentPlan.mealsPerDayRange.upper) {
+          continue;
         }
 
         // ############ LOAD AND RECREATE THE PlanState
         final newSteps = expandPlan(currentState);
         planQueue.addAll(newSteps); // TODO sort and take top 50 if too costly? (quickselect would be faster)
+        //dev.log(newSteps.map((step) => "${step.recipe?.name} ${step.score.toString()}").toString());
       }
+      // TODO failed to generate a plan for this day
     }
 
     // ##################################################### RETURN RESULT

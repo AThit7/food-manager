@@ -76,6 +76,10 @@ abstract class DbBatch {
 
   void rawQuery(String sql, [List<Object?>? arguments]);
 
+  void rawDelete(String sql, [List<Object?>? arguments]);
+
+  void rawUpdate(String sql, [List<Object?>? arguments]);
+
   void delete(String table, {String? where, List<Object?>? whereArgs});
 
   Future<List<Object?>> commit({

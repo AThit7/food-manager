@@ -1,5 +1,6 @@
 import 'dart:developer';
 
+import 'package:food_manager/data/database/schema/meal_plan_schema.dart';
 import 'package:food_manager/data/database/schema/pantry_item_schema.dart';
 import 'package:food_manager/data/database/schema/recipe_ingredient_schema.dart';
 import 'package:food_manager/data/database/schema/recipe_schema.dart';
@@ -17,13 +18,15 @@ final Map<DbConflictAlgorithm, ConflictAlgorithm> _conflictMap = const {
 };
 
 class DatabaseServiceSqflite implements DatabaseService {
-  late final Database _db;
+  Database? _unsafeDb;
+  Database get _db => _unsafeDb ?? (throw StateError("Call 'init()' first."));
 
   @override
   Future<void> init() async {
     final dbPath = join(await getDatabasesPath(), 'user_data.db');
-    await deleteDatabase(dbPath); // TODO: remove later
-    _db = await openDatabase(
+    //await deleteDatabase(dbPath); // TODO: remove later
+
+    _unsafeDb = await openDatabase(
       dbPath,
       onConfigure: (db) async {
         await db.execute("PRAGMA foreign_keys = ON");
@@ -64,7 +67,12 @@ class DatabaseServiceSqflite implements DatabaseService {
     batch.execute(UnitSchema.create);
     batch.execute(PantryItemSchema.create);
     batch.execute(RecipeIngredientSchema.create);
-    await batch.commit();
+    batch.execute(MealPlanSchema.create);
+    ProductSchema.createIndexes.forEach(batch.execute);
+    UnitSchema.createIndexes.forEach(batch.execute);
+    PantryItemSchema.createIndexes.forEach(batch.execute);
+    RecipeIngredientSchema.createIndexes.forEach(batch.execute);
+    await batch.commit(noResult: true);
   }
 
   @override
@@ -198,6 +206,22 @@ class _DbBatchSqflite implements DbBatch {
     List<Object?>? arguments
   ]) {
     _batch.rawQuery(sql, arguments);
+  }
+
+  @override
+  void rawDelete(
+      String sql, [
+        List<Object?>? arguments
+      ]) {
+    _batch.rawDelete(sql, arguments);
+  }
+
+  @override
+  void rawUpdate(
+      String sql, [
+        List<Object?>? arguments
+      ]) {
+    _batch.rawUpdate(sql, arguments);
   }
 }
 

@@ -38,10 +38,10 @@ class ProductValidator{
     if (!_isValidDouble(product.fat, true)) {
       throw ValidationError("Invalid fat.");
     }
-    if (product.expectedShelfLife >= 0) {
+    if (product.expectedShelfLife < 0) {
       throw ValidationError("Invalid expected shelf life.");
     }
-    if (product.shelfLifeAfterOpening >= 0) {
+    if (product.shelfLifeAfterOpening < 0) {
       throw ValidationError("Invalid shelf life after opening.");
     }
     TagValidator.validate(product.tag);

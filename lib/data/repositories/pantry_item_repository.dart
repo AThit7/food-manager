@@ -16,35 +16,40 @@ class PantryItemRepository{
 
   PantryItemRepository(this._db);
 
-  Map<String, dynamic> _pantryItemToMap(PantryItem item) {
+  int boolToSql(bool v) => v ? 1 : 0;
+
+  bool boolFromSql(Object? v) => (v as int) == 1;
+
+  Map<String, dynamic> pantryItemToMap(PantryItem item) {
     return {
       PantryItemSchema.id: item.id,
       PantryItemSchema.uuid: item.uuid,
       PantryItemSchema.productId: item.product.id,
       PantryItemSchema.quantity: item.quantity,
       PantryItemSchema.expirationDate: item.expirationDate.millisecondsSinceEpoch,
-      PantryItemSchema.isOpen: item.isOpen,
+      PantryItemSchema.isOpen: boolToSql(item.isOpen),
+      PantryItemSchema.isBought: boolToSql(item.isBought),
     };
   }
 
-  PantryItem _pantryItemFromMap(Map<String, dynamic> itemMap, LocalProduct product) {
+  PantryItem pantryItemFromMap(Map<String, dynamic> itemMap, LocalProduct product) {
     return PantryItem.withUuid(
       id: itemMap[PantryItemSchema.id] as int,
       uuid: itemMap[PantryItemSchema.uuid] as String,
       product: product,
       quantity: itemMap[PantryItemSchema.quantity] as double,
-      expirationDate: DateTime.fromMillisecondsSinceEpoch(
-          itemMap[PantryItemSchema.expirationDate] as int),
-      isOpen: itemMap[PantryItemSchema.isOpen] as bool,
+      expirationDate: DateTime.fromMillisecondsSinceEpoch(itemMap[PantryItemSchema.expirationDate] as int),
+      isOpen: boolFromSql(itemMap[PantryItemSchema.isOpen]),
+      isBought: boolFromSql(itemMap[PantryItemSchema.isBought]),
     );
   }
 
   Future<RepoResult<int>> insertItem(PantryItem item) async {
-    if (PantryItemValidator.isValid(item)) {
+    if (!PantryItemValidator.isValid(item)) {
       throw ArgumentError('Pantry item has invalid fields.');
     }
     try {
-      final itemMap = _pantryItemToMap(item);
+      final itemMap = pantryItemToMap(item);
 
       final batch = _db.batch();
       batch.insert(
@@ -56,6 +61,7 @@ class PantryItemRepository{
       if (results.isEmpty || results[0] is! int) {
         return RepoError('Insert did not return expected ID.');
       }
+
       return RepoSuccess(results[0] as int);
     } catch (e, s) {
       log(
@@ -73,12 +79,13 @@ class PantryItemRepository{
     if (item.id == null) {
       throw ArgumentError('Product must have an ID when updating.');
     }
-    if (PantryItemValidator.isValid(item)) {
+    if (!PantryItemValidator.isValid(item)) {
+      log(pantryItemToMap(item).toString());
       throw ArgumentError('Pantry item has invalid fields.');
     }
 
     try {
-      final itemMap = _pantryItemToMap(item);
+      final itemMap = pantryItemToMap(item);
 
       final batch = _db.batch();
       batch.update(
@@ -119,6 +126,7 @@ class PantryItemRepository{
         i.${PantryItemSchema.quantity},
         i.${PantryItemSchema.expirationDate},
         i.${PantryItemSchema.isOpen},
+        i.${PantryItemSchema.isBought},
         p.${ProductSchema.id} AS $productId,
         p.${ProductSchema.name},
         p.${ProductSchema.barcode},
@@ -129,6 +137,8 @@ class PantryItemRepository{
         p.${ProductSchema.carbs},
         p.${ProductSchema.protein},
         p.${ProductSchema.fat},
+        p.${ProductSchema.expectedShelfLife},
+        p.${ProductSchema.shelfLifeAfterOpening},
         t.${TagSchema.id} AS $tagId,
         t.${TagSchema.name} AS $tagName
       FROM ${PantryItemSchema.table} i
@@ -140,7 +150,7 @@ class PantryItemRepository{
 
       final List<PantryItem> pantryItems = rows.map((row) {
         final product = LocalProduct(
-          id: row[itemId] as int,
+          id: row[productId] as int,
           barcode: row[ProductSchema.barcode] as String?,
           name: row[ProductSchema.name] as String,
           tag: Tag(id: row[tagId] as int, name: row[tagName] as String),
@@ -162,7 +172,8 @@ class PantryItemRepository{
           product: product,
           quantity: row[PantryItemSchema.quantity] as double,
           expirationDate: DateTime.fromMillisecondsSinceEpoch(row[PantryItemSchema.expirationDate] as int),
-          isOpen: row[PantryItemSchema.isOpen] as bool,
+          isOpen: boolFromSql(row[PantryItemSchema.isOpen]),
+          isBought: boolFromSql(row[PantryItemSchema.isBought]),
         );
       }).toList();
 
@@ -194,6 +205,7 @@ class PantryItemRepository{
         i.${PantryItemSchema.quantity},
         i.${PantryItemSchema.expirationDate},
         i.${PantryItemSchema.isOpen},
+        i.${PantryItemSchema.isBought},
         p.${ProductSchema.id} AS $productId,
         p.${ProductSchema.name},
         p.${ProductSchema.barcode},
@@ -221,7 +233,7 @@ class PantryItemRepository{
       }
 
       final product = LocalProduct(
-        id: row[itemId] as int,
+        id: row[productId] as int,
         barcode: row[ProductSchema.barcode] as String?,
         name: row[ProductSchema.name] as String,
         tag: Tag(id: row[tagId] as int, name: row[tagName] as String),
@@ -237,10 +249,33 @@ class PantryItemRepository{
         units: {},
       );
 
-      return RepoSuccess(_pantryItemFromMap(rows.firstOrNull!, product));
+      return RepoSuccess(pantryItemFromMap(rows.firstOrNull!, product));
     } catch (e, s) {
       log(
         'Unexpected error when fetching pantry item with id $id.',
+        name: 'PantryItemRepository',
+        error: e,
+        stackTrace: s,
+        level: 1200,
+      );
+      return RepoError('Unexpected error when fetching pantry item.', e);
+    }
+  }
+
+  Future<RepoResult<void>> removeItem(PantryItem item) async {
+    if (item.id == null) {
+      throw ArgumentError("item.id can't be null");
+    }
+
+    try {
+      final count = await _db.delete(PantryItemSchema.table, where: "${PantryItemSchema.id} = ?", whereArgs: [item.id!]);
+
+      if (count == 1) return RepoSuccess(null);
+      if (count == 0) return RepoFailure("No item witch matching id.");
+      throw StateError("More than one item deleted.");
+    } catch (e, s) {
+      log(
+        'Unexpected error when deleting PantryItem.',
         name: 'PantryItemRepository',
         error: e,
         stackTrace: s,

@@ -4,15 +4,37 @@ import 'package:flutter/services.dart';
 import '../view_models/product_form_viewmodel.dart';
 import '../models/product_form_model.dart';
 
+class _ContainerSizeHelpSheet extends StatelessWidget {
+  const _ContainerSizeHelpSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text("Container size", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+            SizedBox(height: 8),
+            Text("Enable this for items that always come in the package of this size."),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _Unit {
   final nameFieldKey = GlobalKey<FormFieldState>();
   final valueFieldKey = GlobalKey<FormFieldState>();
-  final  TextEditingController nameController;
-  final  TextEditingController valueController;
+  final TextEditingController nameController;
+  final TextEditingController valueController;
 
   _Unit({String? name, double? value})
       : nameController = TextEditingController(text: name),
-        valueController = TextEditingController(text: value.toString());
+        valueController = TextEditingController(text: value?.toString());
 
   void dispose() {
     nameController.dispose();
@@ -37,7 +59,7 @@ class ProductFormScreen extends StatefulWidget {
 class _ProductFormScreenState extends State<ProductFormScreen > {
   final _formKey = GlobalKey<FormState>();
   late ProductFormModel form;
-  final List<_Unit> units = [_Unit()];
+  final List<_Unit> units = [];
   late TextEditingController containerSizeController;
   bool hasContainer = true;
   bool isSubmitting = false;
@@ -97,8 +119,9 @@ class _ProductFormScreenState extends State<ProductFormScreen > {
     containerSizeController = TextEditingController(text: form.containerSize);
 
     for (final entry in form.units?.entries ?? const Iterable<MapEntry<String, double>>.empty()) {
-      units.add(_Unit(name: entry.key, value: entry.value));
+      if (entry.key != form.referenceUnit) units.add(_Unit(name: entry.key, value: entry.value));
     }
+    units.add(_Unit());
   }
 
   @override
@@ -168,39 +191,43 @@ class _ProductFormScreenState extends State<ProductFormScreen > {
               ),
               Row(
                 children: [
-                  TextFormField(
-                    keyboardType: TextInputType.numberWithOptions(),
-                    inputFormatters: amountFormatters,
-                    decoration: const InputDecoration(
-                      labelText: 'Expected shelf life',
-                      hintText: "ex. 14",
-                      suffix: Text(" days"),
+                  Expanded(
+                    child: TextFormField(
+                      keyboardType: TextInputType.numberWithOptions(),
+                      inputFormatters: amountFormatters,
+                      decoration: const InputDecoration(
+                        labelText: 'Expected shelf life',
+                        hintText: "ex. 14",
+                        suffix: Text(" days"),
+                      ),
+                      enabled: !isSubmitting,
+                      initialValue: form.expectedShelfLife,
+                      onChanged: (String? value) => form.expectedShelfLife = value,
+                      validator: _intFieldValidator(),
                     ),
-                    enabled: !isSubmitting,
-                    initialValue: form.expectedShelfLife,
-                    onChanged: (String? value) => form.expectedShelfLife = value,
-                    validator: _intFieldValidator(),
                   ),
-                  SizedBox(width: 6),
-                  TextFormField(
-                    keyboardType: TextInputType.numberWithOptions(),
-                    inputFormatters: amountFormatters,
-                    decoration: const InputDecoration(
-                      labelText: 'Shelf life after opening',
-                      hintText: "ex. 3",
-                      suffix: Text(" days"),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextFormField(
+                      keyboardType: TextInputType.numberWithOptions(),
+                      inputFormatters: amountFormatters,
+                      decoration: const InputDecoration(
+                        labelText: 'Shelf life after opening',
+                        hintText: "ex. 3",
+                        suffix: Text(" days"),
+                      ),
+                      enabled: !isSubmitting,
+                      initialValue: form.shelfLifeAfterOpening,
+                      onChanged: (String? value) => form.shelfLifeAfterOpening = value,
+                      validator: (String? value) => value == null || value.isEmpty ? null : _intFieldValidator()(value),
                     ),
-                    enabled: !isSubmitting,
-                    initialValue: form.shelfLifeAfterOpening,
-                    onChanged: (String? value) => form.shelfLifeAfterOpening = value,
-                    validator: _intFieldValidator(),
                   ),
                 ],
               ),
               Row(
                 children: [
-                  Text('Reference value:'),
-                  SizedBox(width: 10),
+                  const Text('Reference value:'),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: TextFormField(
                       keyboardType: TextInputType.numberWithOptions(decimal: true),
@@ -219,7 +246,7 @@ class _ProductFormScreenState extends State<ProductFormScreen > {
                       validator: _doubleFieldValidator(),
                     ),
                   ),
-                  SizedBox(width: 10),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: TextFormField( // TODO has to be either g or ml
                       decoration: const InputDecoration(
@@ -254,9 +281,17 @@ class _ProductFormScreenState extends State<ProductFormScreen > {
                       },
                     ),
                   ),
-                  SizedBox(width: 10),
-                  Text(""),
-                  SizedBox(width: 10),
+                  const SizedBox(width: 10),
+                  IconButton(
+                    icon: Icon(Icons.info_outline),
+                    onPressed: () {
+                      showModalBottomSheet<void>(
+                        context: context,
+                        builder: (context) => const _ContainerSizeHelpSheet(),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: TextFormField(
                       controller: containerSizeController,
@@ -277,39 +312,9 @@ class _ProductFormScreenState extends State<ProductFormScreen > {
                       },
                     ),
                   ),
-                  IconButton(
-                    icon: Icon(Icons.info_outline),
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (_) =>
-                            AlertDialog(
-                              title: const Text(
-                                'Container size',
-                                textAlign: TextAlign.center,
-                              ),
-                              content: const Text(
-                                "If this field is disabled, you’ll be prompted"
-                                    " to enter the quantity every time you scan"
-                                    " the barcode. This is helpful for products"
-                                    " that come in varying amounts, like"
-                                    " pre-packaged meat.",
-                              ),
-                              actions: [
-                                Center(
-                                  child: TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    child: const Text('OK'),
-                                  ),
-                                ),
-                              ],
-                            ),
-                      );
-                    },
-                  )
                 ],
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Padding(
                 padding: const EdgeInsets.all(4.0),
                 child: ExpansionTile(
@@ -346,9 +351,9 @@ class _ProductFormScreenState extends State<ProductFormScreen > {
                               },
                             ),
                           ),
-                          SizedBox(width: 10),
+                          const SizedBox(width: 10),
                           Text('='),
-                          SizedBox(width: 10),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: TextFormField(
                               key: unit.valueFieldKey,
@@ -400,7 +405,7 @@ class _ProductFormScreenState extends State<ProductFormScreen > {
                   ],
                 ),
               ),
-              SizedBox(height: 2),
+              const SizedBox(height: 2),
               Card(
                 color: theme.colorScheme.surfaceContainer,
                 elevation: 0,

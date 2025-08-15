@@ -33,12 +33,14 @@ class PantryItemFormViewmodel {
   Future<InsertResult> savePantryItem(PantryItemFormModel form) async {
     PantryItem pantryItem;
     try {
-      pantryItem = PantryItem(
+      pantryItem = PantryItem.withUuid(
         id: form.id,
+        uuid: form.uuid,
         product: product,
         quantity: double.parse(form.quantity!),
         expirationDate: form.expirationDate!, // TODO will it parse?
-        isOpen: form.isOpen
+        isOpen: form.isOpen,
+        isBought: form.isBought,
       );
       PantryItemValidator.validate(pantryItem);
     } catch (e) {

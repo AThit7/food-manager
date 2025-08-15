@@ -21,14 +21,9 @@ class AddProductScreen extends StatefulWidget {
 
 class _AddProductScreenState extends State<AddProductScreen> {
   @override
-  void initState() {
-    widget.viewModel.loadProductData();
-    super.initState();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final viewModel = widget.viewModel;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Product details')),
       body: ListenableBuilder(

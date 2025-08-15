@@ -1,5 +1,213 @@
 import 'package:flutter/material.dart';
+import 'package:food_manager/domain/models/meal_planner/meal_plan.dart';
+import 'package:food_manager/domain/models/pantry_item.dart';
 import 'package:food_manager/ui/planner/view_models/planner_viewmodel.dart';
+
+class DaySummaryCard extends StatelessWidget {
+  const DaySummaryCard({
+    super.key,
+    required this.date,
+    required this.calories,
+    required this.protein,
+    required this.carbs,
+    required this.fat,
+    required this.waste,
+    required this.mealsCount,
+    required this.mealsPerDayRange,
+  });
+
+  final DateTime date;
+  final double calories, protein, carbs, fat, waste;
+  final int mealsCount;
+  final ({int lower, int upper}) mealsPerDayRange;
+
+  @override
+  Widget build(BuildContext context) {
+    final inRange = mealsCount >= mealsPerDayRange.lower && mealsCount <= mealsPerDayRange.upper;
+
+    Widget pill(String label) => Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      ),
+      child: Text(label, style: Theme.of(context).textTheme.labelMedium),
+    );
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Summary", style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                pill('${calories.toStringAsFixed(0)} kcal'),
+                pill('Protein ${protein.toStringAsFixed(0)}g'),
+                pill('Carbs ${carbs.toStringAsFixed(0)}g'),
+                pill('Fat ${fat.toStringAsFixed(0)}g'),
+                pill('Waste ${waste.toStringAsFixed(0)}g/ml'),
+                if (!inRange) pill('Meals: $mealsCount / ${mealsPerDayRange.lower}-${mealsPerDayRange.upper}'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class RecipeCard extends StatefulWidget {
+  const RecipeCard({
+    super.key,
+    required this.slot,
+    required this.onTapItem,
+    required this.onConsume,
+  });
+
+  final MealPlanSlot slot;
+  final void Function(PantryItem item) onTapItem;
+  final void Function(MealPlanSlot slot) onConsume;
+
+  @override
+  State<RecipeCard> createState() => _RecipeCardState();
+}
+
+class _RecipeCardState extends State<RecipeCard> {
+  @override
+  Widget build(BuildContext context) {
+    final titleStyle = Theme.of(context).textTheme.titleMedium;
+    final isEaten = widget.slot.isEaten;
+
+    Widget macroPill(String label) => Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      ),
+      child: Text(label, style: Theme.of(context).textTheme.labelSmall),
+    );
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          Text(widget.slot.uuid, style: Theme.of(context).textTheme.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+          Row(
+            children: [
+              Expanded(
+                child: ListTile(
+                  title: Text(widget.slot.recipe.name, style: titleStyle),
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Wrap(
+                      spacing: 8,
+                      children: [
+                        macroPill('${widget.slot.calories.toStringAsFixed(0)} kcal'),
+                        macroPill('P ${widget.slot.protein.toStringAsFixed(0)}g'),
+                        macroPill('C ${widget.slot.carbs.toStringAsFixed(0)}g'),
+                        macroPill('F ${widget.slot.fat.toStringAsFixed(0)}g'),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              IconButton(
+                onPressed: isEaten ? null : () {
+                  setState(() {
+                    widget.onConsume(widget.slot);
+                  });
+                },
+                icon: isEaten ? const Icon(Icons.no_meals) : const Icon(Icons.restaurant),
+                tooltip: isEaten ? "Meal already consumed" : "Consume this meal",
+              ),
+            ],
+          ),
+          if (!widget.slot.isEaten) ...[
+            const Divider(height: 1),
+            Theme(
+              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+              child: ExpansionTile(
+                tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+                title: Text('Ingredients', style: Theme.of(context).textTheme.bodyMedium),
+                childrenPadding: const EdgeInsets.symmetric(horizontal: 16),
+                children: [
+                  for (final ingredient in widget.slot.recipe.ingredients) ...[
+                    Text(
+                      "${ingredient.tag.name} (${ingredient.amount} ${ingredient.unit})",
+                      style: Theme.of(context).textTheme.labelLarge!.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 4),
+                    for (final comp in widget.slot.ingredients[ingredient.tag.name] ?? [])
+                      _IngredientLine(
+                        item: comp.item,
+                        quantity: comp.quantity,
+                        onTap: () => widget.onTapItem(comp.item),
+                      ),
+                    const SizedBox(height: 8),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _IngredientLine extends StatelessWidget {
+  const _IngredientLine({
+    required this.item,
+    required this.quantity,
+    required this.onTap,
+  });
+
+  final PantryItem item;
+  final double quantity;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final expiresInDays = item.expirationDate.difference(DateTime.now()).inDays;
+    final expiresText = expiresInDays >= 0 ? 'in ${expiresInDays}d' : '${expiresInDays.abs()}d ago';
+
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    item.product.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text('$quantity${item.product.referenceUnit}'),
+                const SizedBox(width: 8),
+                Icon(Icons.schedule, size: 14),
+                const SizedBox(width: 4),
+                Text(expiresText, style: Theme.of(context).textTheme.bodySmall),
+              ],
+            ),
+            const SizedBox(width: 8),
+            Text(item.uuid, style: Theme.of(context).textTheme.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class PlannerScreen extends StatefulWidget {
   const PlannerScreen({super.key, required this.viewModel});
@@ -13,7 +221,22 @@ class PlannerScreen extends StatefulWidget {
 class _PlannerScreenState extends State<PlannerScreen> {
   final months = List.unmodifiable(['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August',
     'September', 'October', 'November', 'December']);
-  DateTime selectedDate = DateTime.now();
+  late DateTime selectedDate;
+
+  String _formatDate(DateTime d) {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const weekdays = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    final wd = weekdays[(d.weekday - DateTime.monday) % 7];
+    return '$wd, ${months[d.month-1]} ${d.day}';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final today = DateTime.now();
+    selectedDate = DateTime(today.year, today.month, today.day);
+    widget.viewModel.loadMealPlan();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,9 +247,17 @@ class _PlannerScreenState extends State<PlannerScreen> {
         title: const Text('Meal plan'),
         actions: [
           IconButton(
+            onPressed: () {
+              if (!viewModel.isLoading) viewModel.loadMealPlan(false);
+            },
+            icon: Icon(Icons.autorenew),
+            tooltip: "Regenerate plan",
+          ),
+          IconButton(
             onPressed: null, // TODO preferences
             icon: Icon(Icons.settings),
-          )
+            tooltip: "Preferences",
+          ),
         ],
       ),
       body: ListenableBuilder(
@@ -37,7 +268,13 @@ class _PlannerScreenState extends State<PlannerScreen> {
           } else if (viewModel.errorMessage != null) {
             return Center(child: Text(viewModel.errorMessage!));
           } else if (viewModel.mealPlan != null) {
-            final slot = viewModel.mealPlan!.getDate(selectedDate);
+            final slots = viewModel.mealPlan!.getDate(selectedDate);
+            final mealsCount = slots?.length ?? 0;
+            final calories = viewModel.mealPlan!.getCaloriesDate(selectedDate);
+            final protein = viewModel.mealPlan!.getProteinDate(selectedDate);
+            final carbs = viewModel.mealPlan!.getCarbsDate(selectedDate);
+            final fat = viewModel.mealPlan!.getFatDate(selectedDate);
+            final waste = viewModel.mealPlan!.getWasteDate(selectedDate);
 
             return Padding(
               padding: const EdgeInsets.all(16.0),
@@ -45,7 +282,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
                 children: [
                   Row(
                     children: [
-                      Text('${months[selectedDate.month]} ${selectedDate.day}'),
+                      Text(_formatDate(selectedDate), style: Theme.of(context).textTheme.titleMedium),
                       Expanded(child: SizedBox()), // TODO ?
                       IconButton(
                         icon: const Icon(Icons.keyboard_arrow_left_rounded),
@@ -66,16 +303,30 @@ class _PlannerScreenState extends State<PlannerScreen> {
                     ],
                   ),
                   SizedBox(height: 8),
-                  if (slot == null)
-                    Center(child: Text("There is no plan for this day"))
-                  else
-                    for (final recipeData in slot.recipes)
-                      Column(
-                        children: [
-                          Card(child: Text(recipeData.recipe.name)),
-                          SizedBox(height: 8),
-                        ],
+                  if (slots == null) Center(child: Text("This day is out of plan's range"))
+                  else if (slots.isEmpty) Center(child: Text("There is no plan for this day"))
+                  else ...[
+                    DaySummaryCard(
+                      date: selectedDate,
+                      calories: calories,
+                      protein: protein,
+                      carbs: carbs,
+                      fat: fat,
+                      waste: waste,
+                      mealsCount: mealsCount,
+                      mealsPerDayRange: viewModel.mealPlan!.mealsPerDayRange,
+                    ),
+                    SizedBox(height: 8),
+                    for (final slot in slots) ...[
+                      RecipeCard(
+                        slot: slot,
+                        onTapItem: (item) {
+                          //Navigator.push();
+                        },
+                        onConsume: viewModel.consumeSlot,
                       ),
+                    ],
+                  ],
                 ],
               ),
             );

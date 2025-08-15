@@ -51,6 +51,8 @@ class RecipeRepository{
       RecipeSchema.name: recipe.name,
       RecipeSchema.preparationTime: recipe.preparationTime,
       RecipeSchema.instructions: recipe.instructions,
+      RecipeSchema.timesUsed: recipe.timesUsed,
+      RecipeSchema.lastTimeUsed: recipe.lastTimeUsed?.millisecondsSinceEpoch,
     };
   }
 
@@ -77,12 +79,16 @@ class RecipeRepository{
   }
 
   Recipe _recipeFromMap(Map<String, dynamic> recipeMap) {
+    final lastTime = recipeMap[RecipeSchema.lastTimeUsed] as int?;
+
     return Recipe(
       id: recipeMap[RecipeSchema.id] as int,
       name: recipeMap[RecipeSchema.name] as String,
       ingredients: [],
       preparationTime: recipeMap[RecipeSchema.preparationTime] as int,
       instructions: recipeMap[RecipeSchema.instructions] as String?,
+      timesUsed: recipeMap[RecipeSchema.timesUsed] as int,
+      lastTimeUsed: lastTime == null ? null : DateTime.fromMillisecondsSinceEpoch(lastTime),
     );
   }
 

@@ -7,8 +7,11 @@ class RecipeFormModel {
   List<IngredientData>? ingredients;
   String? instructions;
   String? preparationTime;
+  int? timesUsed;
+  DateTime? lastTimeUsed;
 
-  RecipeFormModel({this.id, this.name, this.ingredients, this.instructions, this.preparationTime});
+  RecipeFormModel({this.id, this.name, this.ingredients, this.instructions, this.preparationTime, this.timesUsed,
+    this.lastTimeUsed});
 
   RecipeFormModel.fromRecipe(Recipe recipe) {
     id = recipe.id;
@@ -20,6 +23,8 @@ class RecipeFormModel {
     )).toList();
     instructions = recipe.instructions;
     preparationTime = recipe.preparationTime.toString();
+    timesUsed = recipe.timesUsed;
+    lastTimeUsed = recipe.lastTimeUsed;
   }
 
   RecipeFormModel copyWith({
@@ -35,6 +40,8 @@ class RecipeFormModel {
       ingredients: ingredients ?? this.ingredients,
       instructions: instructions ?? this.instructions,
       preparationTime: preparationTime ?? this.preparationTime,
+      timesUsed: timesUsed,
+      lastTimeUsed: lastTimeUsed,
     );
   }
 }

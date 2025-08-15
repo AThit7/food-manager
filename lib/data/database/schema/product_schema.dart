@@ -38,4 +38,8 @@ abstract class ProductSchema {
         ON DELETE RESTRICT
     )
   ''';
+
+  static const createIndexes = [
+    'CREATE INDEX idx_${table}_$tagId ON $table($tagId)',
+  ];
 }

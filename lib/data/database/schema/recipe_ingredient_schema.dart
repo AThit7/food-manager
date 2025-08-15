@@ -25,4 +25,9 @@ abstract class RecipeIngredientSchema {
       PRIMARY KEY ($recipeId, $tagId)
     )
   ''';
+
+  static const createIndexes = [
+    'CREATE INDEX idx_${table}_$recipeId ON $table($recipeId)',
+    'CREATE INDEX idx_${table}_$tagId ON $table($tagId)',
+  ];
 }

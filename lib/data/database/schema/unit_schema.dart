@@ -20,4 +20,9 @@ abstract class UnitSchema {
         ON DELETE CASCADE
     )
   ''';
+
+  static const createIndexes = [
+    'CREATE INDEX idx_${table}_$productId ON $table($productId)',
+    'CREATE UNIQUE INDEX idx_${table}_${productId}_$name ON $table($productId, $name);',
+  ];
 }
