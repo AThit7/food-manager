@@ -151,6 +151,8 @@ class _RecipeFormState extends State<RecipeFormScreen> {
                       alignment: Alignment.topLeft,
                       child: Material(
                         elevation: 4.0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        clipBehavior: Clip.antiAlias,
                         child: ConstrainedBox(
                           constraints: BoxConstraints(maxWidth: fieldWidth, maxHeight: 5*48), // adjust width here
                           child: ListView(
@@ -227,9 +229,11 @@ class _RecipeFormState extends State<RecipeFormScreen> {
                           return Align(
                             alignment: Alignment.topLeft,
                             child: Material(
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              clipBehavior: Clip.antiAlias,
                               elevation: 4.0,
                               child: ConstrainedBox(
-                                constraints: BoxConstraints(maxWidth: fieldWidth), // adjust width here
+                                constraints: BoxConstraints(maxWidth: fieldWidth),
                                 child: ListView(
                                   padding: EdgeInsets.zero,
                                   shrinkWrap: true,
@@ -397,13 +401,14 @@ class _RecipeFormState extends State<RecipeFormScreen> {
               ),
             ],
           ),
-          Text(
-            ingredient.originalValue,
-            style: theme.textTheme.bodySmall?.copyWith(
-              fontStyle: FontStyle.italic,
-              color: Colors.grey[600],
+          if (ingredient.originalValue.isNotEmpty)
+            Text(
+              ingredient.originalValue,
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontStyle: FontStyle.italic,
+                color: Colors.grey[600],
+              ),
             ),
-          ),
         ],
       ),
     );

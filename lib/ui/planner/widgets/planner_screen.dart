@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:food_manager/domain/models/meal_planner/meal_plan.dart';
 import 'package:food_manager/domain/models/pantry_item.dart';
 import 'package:food_manager/ui/planner/view_models/planner_viewmodel.dart';
+import 'package:food_manager/ui/planner/widgets/planner_preferences_sheet.dart';
 
 class DaySummaryCard extends StatelessWidget {
   const DaySummaryCard({
@@ -96,7 +97,7 @@ class _RecipeCardState extends State<RecipeCard> {
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
-          Text(widget.slot.uuid, style: Theme.of(context).textTheme.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+          //Text(widget.slot.uuid, style: Theme.of(context).textTheme.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
           Row(
             children: [
               Expanded(
@@ -201,7 +202,7 @@ class _IngredientLine extends StatelessWidget {
               ],
             ),
             const SizedBox(width: 8),
-            Text(item.uuid, style: Theme.of(context).textTheme.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+            //Text(item.uuid, style: Theme.of(context).textTheme.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
           ],
         ),
       ),
@@ -219,9 +220,8 @@ class PlannerScreen extends StatefulWidget {
 }
 
 class _PlannerScreenState extends State<PlannerScreen> {
-  final months = List.unmodifiable(['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August',
-    'September', 'October', 'November', 'December']);
   late DateTime selectedDate;
+  PageController? _pageController;
 
   String _formatDate(DateTime d) {
     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -230,12 +230,22 @@ class _PlannerScreenState extends State<PlannerScreen> {
     return '$wd, ${months[d.month-1]} ${d.day}';
   }
 
+  int _idxFor(DateTime d, MealPlan p) => (d.difference(p.dayZero).inDays).clamp(0, p.length - 1);
+  DateTime _dateFor(int i, MealPlan p) => p.dayZero.add(Duration(days: i));
+
+
   @override
   void initState() {
     super.initState();
     final today = DateTime.now();
     selectedDate = DateTime(today.year, today.month, today.day);
     widget.viewModel.loadMealPlan();
+  }
+
+  @override
+  void dispose() {
+    _pageController?.dispose();
+    super.dispose();
   }
 
   @override
@@ -254,7 +264,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
             tooltip: "Regenerate plan",
           ),
           IconButton(
-            onPressed: null, // TODO preferences
+            onPressed: () => showPlannerPreferencesSheet(context, viewModel),
             icon: Icon(Icons.settings),
             tooltip: "Preferences",
           ),
@@ -263,72 +273,75 @@ class _PlannerScreenState extends State<PlannerScreen> {
       body: ListenableBuilder(
         listenable: viewModel,
         builder: (context, child) {
+          final plan = widget.viewModel.mealPlan;
           if (viewModel.isLoading) {
             return Center(child: const CircularProgressIndicator());
           } else if (viewModel.errorMessage != null) {
             return Center(child: Text(viewModel.errorMessage!));
-          } else if (viewModel.mealPlan != null) {
-            final slots = viewModel.mealPlan!.getDate(selectedDate);
-            final mealsCount = slots?.length ?? 0;
-            final calories = viewModel.mealPlan!.getCaloriesDate(selectedDate);
-            final protein = viewModel.mealPlan!.getProteinDate(selectedDate);
-            final carbs = viewModel.mealPlan!.getCarbsDate(selectedDate);
-            final fat = viewModel.mealPlan!.getFatDate(selectedDate);
-            final waste = viewModel.mealPlan!.getWasteDate(selectedDate);
+          } else if (plan != null) {
+            _pageController ??= PageController(initialPage: _idxFor(selectedDate, plan));
 
-            return Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: ListView(
-                children: [
-                  Row(
+            return PageView.builder(
+              controller: _pageController,
+              onPageChanged: (i) => setState(() => selectedDate = _dateFor(i, plan)),
+              itemCount: plan.length,
+              itemBuilder: (context, i) {
+                final date = _dateFor(i, plan);
+                final slots = plan.getDate(date);
+                final mealsCount = slots?.length ?? 0;
+                final calories = plan.getCaloriesDate(date);
+                final protein = plan.getProteinDate(date);
+                final carbs = plan.getCarbsDate(date);
+                final fat = plan.getFatDate(date);
+                final waste = plan.getWasteDate(date);
+
+                return Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: ListView(
                     children: [
-                      Text(_formatDate(selectedDate), style: Theme.of(context).textTheme.titleMedium),
-                      Expanded(child: SizedBox()), // TODO ?
-                      IconButton(
-                        icon: const Icon(Icons.keyboard_arrow_left_rounded),
-                        onPressed: () {
-                          setState(() {
-                            selectedDate = selectedDate.subtract(Duration(days: 1));
-                          });
-                        },
+                      Row(
+                        children: [
+                          Text(_formatDate(date), style: Theme.of(context).textTheme.titleMedium),
+                          const Spacer(),
+                          IconButton(
+                            icon: const Icon(Icons.keyboard_double_arrow_left_rounded),
+                            onPressed: i <= 0 ? null : () => _pageController!.jumpToPage(0),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.keyboard_double_arrow_right_rounded),
+                            onPressed: i >= plan.length - 1 ? null : () => _pageController!.jumpToPage(plan.length),
+                          ),
+                        ],
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.keyboard_arrow_right_rounded),
-                        onPressed: () {
-                          setState(() {
-                            selectedDate = selectedDate.add(Duration(days: 1));
-                          });
-                        },
-                      ),
+                      SizedBox(height: 8),
+                      if (slots == null) Center(child: Text("This day is out of plan's range"))
+                      else if (slots.isEmpty) Center(child: Text("There is no plan for this day"))
+                      else ...[
+                        DaySummaryCard(
+                          date: date,
+                          calories: calories,
+                          protein: protein,
+                          carbs: carbs,
+                          fat: fat,
+                          waste: waste,
+                          mealsCount: mealsCount,
+                          mealsPerDayRange: plan.mealsPerDayRange,
+                        ),
+                        SizedBox(height: 8),
+                        for (final slot in slots) ...[
+                          RecipeCard(
+                            slot: slot,
+                            onTapItem: (item) {
+                              //Navigator.push();
+                            },
+                            onConsume: viewModel.consumeSlot,
+                          ),
+                        ],
+                      ],
                     ],
                   ),
-                  SizedBox(height: 8),
-                  if (slots == null) Center(child: Text("This day is out of plan's range"))
-                  else if (slots.isEmpty) Center(child: Text("There is no plan for this day"))
-                  else ...[
-                    DaySummaryCard(
-                      date: selectedDate,
-                      calories: calories,
-                      protein: protein,
-                      carbs: carbs,
-                      fat: fat,
-                      waste: waste,
-                      mealsCount: mealsCount,
-                      mealsPerDayRange: viewModel.mealPlan!.mealsPerDayRange,
-                    ),
-                    SizedBox(height: 8),
-                    for (final slot in slots) ...[
-                      RecipeCard(
-                        slot: slot,
-                        onTapItem: (item) {
-                          //Navigator.push();
-                        },
-                        onConsume: viewModel.consumeSlot,
-                      ),
-                    ],
-                  ],
-                ],
-              ),
+                );
+              },
             );
           } else {
             assert(false);

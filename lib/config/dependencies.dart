@@ -4,6 +4,7 @@ import 'package:food_manager/data/repositories/recipe_repository.dart';
 import 'package:food_manager/data/repositories/tag_repository.dart';
 import 'package:food_manager/domain/models/meal_planner/meal_planner_config.dart';
 import 'package:food_manager/domain/services/meal_planner.dart';
+import 'package:food_manager/domain/services/shopping_list_generator.dart';
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
 
@@ -39,5 +40,6 @@ Future<List<SingleChildWidget>> initProviders() async {
       recipeRepository: recipeRepository,
     )),
     Provider(create: (context) => MealPlanner(config: mealPlannerConfig)),
+    Provider(create: (context) => ShoppingListGenerator()),
   ];
 }

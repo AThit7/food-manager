@@ -1,8 +1,8 @@
 class MealPlanConstraints {
-  final ({double lower, double upper}) calorieRange;
-  final ({double lower, double upper}) proteinRange;
-  final ({double lower, double upper}) carbsRange;
-  final ({double lower, double upper}) fatRange;
+  final ({int lower, int upper}) calorieRange;
+  final ({int lower, int upper}) proteinRange;
+  final ({int lower, int upper}) carbsRange;
+  final ({int lower, int upper}) fatRange;
 
   MealPlanConstraints({
     required this.calorieRange,

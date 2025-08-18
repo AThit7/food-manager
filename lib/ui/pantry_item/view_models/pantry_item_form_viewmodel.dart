@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:developer';
 
+import 'package:flutter/material.dart';
 import 'package:food_manager/core/result/repo_result.dart';
 import 'package:food_manager/domain/models/product/local_product.dart';
 
@@ -28,7 +29,11 @@ class PantryItemFormViewmodel {
   }) : _pantryItemRepository = pantryItemRepository;
 
   final PantryItemRepository _pantryItemRepository;
-  final LocalProduct product;
+  LocalProduct product;
+
+  void setProduct(LocalProduct product) {
+    this.product = product;
+  }
 
   Future<InsertResult> savePantryItem(PantryItemFormModel form) async {
     PantryItem pantryItem;
@@ -38,7 +43,7 @@ class PantryItemFormViewmodel {
         uuid: form.uuid,
         product: product,
         quantity: double.parse(form.quantity!),
-        expirationDate: form.expirationDate!, // TODO will it parse?
+        expirationDate: DateUtils.dateOnly(form.expirationDate!),
         isOpen: form.isOpen,
         isBought: form.isBought,
       );

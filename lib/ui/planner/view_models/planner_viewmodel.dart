@@ -40,14 +40,68 @@ class PlannerViewmodel extends ChangeNotifier {
   String? errorMessage;
   MealPlan? mealPlan;
 
+  ({int lower, int upper}) get mealCountRange =>
+      (lower: _preferences.lowerMealCount ?? 3, upper: _preferences.upperMealCount ?? 5);
+  ({int lower, int upper}) get calorieRange =>
+      (lower: _preferences.lowerCalories ?? 0, upper: _preferences.upperCalories ?? 5000);
+  ({int lower, int upper}) get proteinRange =>
+      (lower: _preferences.lowerProtein ?? 0, upper: _preferences.upperProtein ?? 1000);
+  ({int lower, int upper}) get carbsRange =>
+      (lower: _preferences.lowerCarbs ?? 0, upper: _preferences.upperCarbs ?? 1000);
+  ({int lower, int upper}) get fatRange =>
+      (lower: _preferences.lowerFat ?? 0, upper: _preferences.upperFat ?? 1000);
+
+  Future<void> savePreferences({
+    required ({int lower, int upper}) mealCountRang,
+    required ({int lower, int upper}) calorieRange,
+    required ({int lower, int upper}) proteinRange,
+    required ({int lower, int upper}) carbsRange,
+    required ({int lower, int upper}) fatRange
+  }) async {
+    try {
+      errorMessage = null;
+
+      if (mealCountRang.lower > mealCountRang.upper) {
+        throw ArgumentError('Meal count: lower cannot exceed upper.');
+      }
+      void check(String name, int lo, int hi) {
+        if (lo > hi) {
+          throw ArgumentError('$name: lower ($lo) cannot exceed upper ($hi).');
+        }
+      }
+
+      check('Calories', calorieRange.lower, calorieRange.upper);
+      check('Protein', proteinRange.lower, proteinRange.upper);
+      check('Carbs', carbsRange.lower, carbsRange.upper);
+      check('Fat', fatRange.lower, fatRange.upper);
+
+      await Future.wait([
+        _preferences.setLowerMealCount(mealCountRang.lower),
+        _preferences.setUpperMealCount(mealCountRang.upper),
+        _preferences.setCaloriesRange(lower: calorieRange.lower, upper: calorieRange.upper),
+        _preferences.setProteinRange(lower: proteinRange.lower, upper: proteinRange.upper),
+        _preferences.setCarbsRange(lower: carbsRange.lower, upper: carbsRange.upper),
+        _preferences.setFatRange(lower: fatRange.lower, upper: fatRange.upper),
+      ]);
+
+    } catch (e, s) {
+      log(
+        "Failed to save preferences",
+        name: 'PlannerViewmodel',
+        error: s,
+        stackTrace: s
+      );
+      errorMessage = 'Failed to save preferences.';
+    }
+  }
+
   Future<void> _loadMealPlanFromDb() async {
     final planResult = await _mealPlanRepository.getLatestPlan();
     switch (planResult) {
-      case RepoSuccess(data: final plan):
-        mealPlan = plan;
-        break;
-      case RepoError(message: final msg):
-        errorMessage = msg;
+      case RepoSuccess():
+        mealPlan = planResult.data;
+      case RepoError():
+        errorMessage = planResult.message;
       case RepoFailure():
     }
   }
@@ -110,14 +164,14 @@ class PlannerViewmodel extends ChangeNotifier {
       pantryItems: pantryItems,
       recipes: recipes,
       constraints: MealPlanConstraints(
-        calorieRange: (lower: 1500, upper: 3000),
-        proteinRange: (lower: 0, upper: 3000),
-        carbsRange: (lower: 0, upper: 3000),
-        fatRange: (lower: 0, upper: 3000),
+        calorieRange: (lower: _preferences.upperCarbs ?? 1500, upper: _preferences.upperCalories ?? 5000),
+        proteinRange: (lower: _preferences.upperProtein ?? 0, upper: _preferences.upperCalories ?? 1000),
+        carbsRange: (lower: _preferences.upperCarbs ?? 0, upper: _preferences.upperCalories ?? 1000),
+        fatRange: (lower: _preferences.upperFat ?? 0, upper: _preferences.upperCalories ?? 1000),
       ),
       currentPlan: MealPlan(
         dayZero: DateTime.now(),
-        mealsPerDayRange: (lower: _preferences.lowerMealCount, upper: _preferences.upperMealCount),
+        mealsPerDayRange: (lower: _preferences.lowerMealCount ?? 3, upper: _preferences.upperMealCount ?? 5),
         plan: [],
         waste: [],
         valid: []

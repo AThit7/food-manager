@@ -284,4 +284,48 @@ class PantryItemRepository{
       return RepoError('Unexpected error when fetching pantry item.', e);
     }
   }
+
+  Future<RepoResult<void>> buyItems(Iterable<PantryItem> items) async {
+    if (items.isEmpty) {
+      throw ArgumentError("The item list can't be empty.");
+    }
+    if (!items.every(PantryItemValidator.isValid)) {
+      throw ArgumentError('At least one item has invalid fields.');
+    }
+    if (items.any((i) => i.isBought)) {
+      throw ArgumentError('At least one item is already bought.');
+    }
+    final uuids = items.map((e) => e.uuid).toSet();
+    if (items.length != uuids.length) {
+      throw ArgumentError('Items must be unique (uuid wise).');
+    }
+
+    try {
+      return await _db.transaction<RepoResult<void>>((txn) async {
+        final placeholders = List.filled(uuids.length, '?').join(',');
+        final sql = '''
+        UPDATE ${PantryItemSchema.table}
+        SET ${PantryItemSchema.isBought} = 1
+        WHERE ${PantryItemSchema.isBought} = 0
+          AND ${PantryItemSchema.uuid} IN ($placeholders)
+      ''';
+        final count = await txn.rawUpdate(sql, uuids.toList(growable: false));
+
+        if (count != uuids.length) {
+          return RepoFailure('Updated $count of ${uuids.length} items.'
+              'Some UUIDs may not exist or were already bought.');
+        }
+        return RepoSuccess(null);
+      });
+    } catch (e, s) {
+      log(
+        'Unexpected error when buying pantry items.',
+        name: 'PantryItemRepository',
+        error: e,
+        stackTrace: s,
+        level: 1200,
+      );
+      return RepoError('Unexpected error when buying pantry items.', e);
+    }
+  }
 }

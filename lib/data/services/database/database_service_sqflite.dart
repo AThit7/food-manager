@@ -57,6 +57,17 @@ class DatabaseServiceSqflite implements DatabaseService {
         level: 1200,
       );
     }
+
+    await _db.transaction((txn) async {
+      await txn.rawDelete('''
+      DELETE FROM ${TagSchema.table}
+      WHERE ${TagSchema.id} NOT IN (
+        SELECT ${ProductSchema.tagId} FROM ${ProductSchema.table}
+        UNION
+        SELECT ${RecipeIngredientSchema.tagId} FROM ${RecipeIngredientSchema.table}
+      )
+    ''');
+    });
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -121,6 +132,22 @@ class DatabaseServiceSqflite implements DatabaseService {
     List<Object?>? arguments
   ]) {
     return _db.rawQuery(sql, arguments);
+  }
+
+  @override
+  Future<int> rawDelete(
+      String sql, [
+        List<Object?>? arguments
+      ]) {
+    return _db.rawDelete(sql, arguments);
+  }
+
+  @override
+  Future<int> rawUpdate(
+      String sql, [
+        List<Object?>? arguments
+      ]) {
+    return _db.rawUpdate(sql, arguments);
   }
 
   @override
@@ -276,6 +303,22 @@ class _DbTransactionSqflite implements DbTransaction {
         List<Object?>? arguments
       ]) {
     return _txn.rawQuery(sql, arguments);
+  }
+
+  @override
+  Future<int> rawDelete(
+      String sql, [
+        List<Object?>? arguments
+      ]) {
+    return _txn.rawDelete(sql, arguments);
+  }
+
+  @override
+  Future<int> rawUpdate(
+      String sql, [
+        List<Object?>? arguments
+      ]) {
+    return _txn.rawUpdate(sql, arguments);
   }
 
   @override

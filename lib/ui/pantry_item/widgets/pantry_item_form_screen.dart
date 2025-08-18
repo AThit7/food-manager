@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:food_manager/domain/models/product/local_product.dart';
+import 'package:food_manager/ui/products/view_models/product_viewmodel.dart';
+import 'package:food_manager/ui/products/widgets/product_screen.dart';
+import 'package:provider/provider.dart';
 
 import '../view_models/pantry_item_form_viewmodel.dart';
 import '../models/pantry_item_form_model.dart';
@@ -43,13 +47,6 @@ class _PantryItemFormScreenState extends State<PantryItemFormScreen > {
         return null;
       };
 
-  String? _stringFieldValidator(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Please enter some name';
-    }
-    return null;
-  }
-
   @override
   void dispose() {
     _dateFieldController.dispose();
@@ -76,11 +73,11 @@ class _PantryItemFormScreenState extends State<PantryItemFormScreen > {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final amountFormatters = [
       FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d*$')),
     ];
-    final product = widget.viewModel.product;
+    final viewModel = widget.viewModel;
+    final product = viewModel.product;
     final units = List<DropdownMenuItem<String>>.unmodifiable(
         product.units.keys.map((unit) => DropdownMenuItem<String>(value: unit, child: Text(unit)))
     );
@@ -95,7 +92,53 @@ class _PantryItemFormScreenState extends State<PantryItemFormScreen > {
           key: _formKey,
           child: ListView(
             children: [
-              // TODO Display some product info
+              Card(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () async {
+                    final newProduct = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ProductScreen(
+                          viewModel: ProductViewmodel(
+                            product: product,
+                            localProductRepository: context.read(),
+                          ),
+                        ),
+                      ),
+                    );
+
+                    if (!context.mounted) return;
+                    if(newProduct is! LocalProduct) Navigator.pop(context);
+                    setState(() {
+                      viewModel.setProduct(newProduct as LocalProduct);
+                    });
+                  },
+                  child: ListTile(
+                    dense: true,
+                    visualDensity: VisualDensity.compact,
+                    leading: const Icon(Icons.inventory_2_outlined),
+                    title: Text(
+                      product.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text(
+                      '${product.tag.name} • '
+                          '${(product.containerSize ?? product.referenceValue).toStringAsFixed(0)} '
+                          '${product.referenceUnit} • ${product.calories.toStringAsFixed(0)} kcal'
+                          '\nP/C/F per ${product.referenceValue.toStringAsFixed(0)} ${product.referenceUnit}: '
+                          '${product.protein.toStringAsFixed(0)}/'
+                          '${product.carbs.toStringAsFixed(0)}/'
+                          '${product.fat.toStringAsFixed(0)} g',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
               Row(
                 children: [
                   Expanded(
@@ -111,15 +154,14 @@ class _PantryItemFormScreenState extends State<PantryItemFormScreen > {
                       onChanged: (String value) {
                         form.quantity = value.isEmpty ? null : value;
                       },
-                      validator: (String? value) {
-                        if(!_isValidAmount(form.quantity)) return "Invalid amount";
-                        return null;
-                      },
+                      validator: _doubleFieldValidator(),
                     ),
                   ),
                   SizedBox(width: 8),
                   Expanded(
-                    child: DropdownButtonFormField<String>( // TODO make this look better like in recipe form
+                    child: DropdownButtonFormField<String>(
+                      borderRadius: BorderRadius.circular(12),
+                      isExpanded: false,
                       decoration: InputDecoration(
                         labelText: 'Unit',
                         border: OutlineInputBorder(),
@@ -142,7 +184,7 @@ class _PantryItemFormScreenState extends State<PantryItemFormScreen > {
                 decoration: const InputDecoration(
                   labelText: 'Expiration date',
                   border: OutlineInputBorder(),
-                  suffixIcon: Icon(Icons.calendar_month),
+                  suffixIcon: Icon(Icons.event),
                 ),
                 readOnly: true,
                 enabled: !isSubmitting,
@@ -161,7 +203,7 @@ class _PantryItemFormScreenState extends State<PantryItemFormScreen > {
                   }
                 },
                 validator: (String? value) {
-                  if (form.expirationDate == null) return "Invalid date";
+                  if (form.expirationDate == null) return 'Invalid date';
                   return null;
                 },
               ),
@@ -188,7 +230,7 @@ class _PantryItemFormScreenState extends State<PantryItemFormScreen > {
                     if (_formKey.currentState!.validate()) {
                       _formKey.currentState!.save();
 
-                      final result = await widget.viewModel.savePantryItem(form.copyWith());
+                      final result = await viewModel.savePantryItem(form.copyWith());
                       if (!context.mounted) return;
 
                       switch (result) {
@@ -196,10 +238,10 @@ class _PantryItemFormScreenState extends State<PantryItemFormScreen > {
                           Navigator.pop(context, result.pantryItem);
                         case InsertValidationFailure():
                           ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text("Failed to add pantry item. Invalid item details."))
+                              SnackBar(content: Text('Failed to add pantry item. Invalid item details.'))
                           );
                         case InsertRepoFailure():
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Unexpected error.")));
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Unexpected error.')));
                       }
                     }
                     setState(() => isSubmitting = false);

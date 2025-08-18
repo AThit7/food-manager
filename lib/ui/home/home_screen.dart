@@ -5,10 +5,11 @@ import 'package:food_manager/ui/recipes/view_models/all_recipes_viewmodel.dart';
 import 'package:food_manager/ui/recipes/view_models/recipe_form_viewmodel.dart';
 import 'package:food_manager/ui/recipes/widgets/all_recipes_screen.dart';
 import 'package:food_manager/ui/recipes/widgets/recipe_form_screen.dart';
+import 'package:food_manager/ui/shopping_list/view_models/shopping_list_viewmodel.dart';
+import 'package:food_manager/ui/shopping_list/widgets/shopping_list_screen.dart';
 import 'package:provider/provider.dart';
 
 import '../scanner/widgets/scanner_screen.dart';
-import '../scanner/view_models/scanner_viewmodel.dart';
 import '../products/widgets/all_products_screen.dart';
 import '../products/view_models/all_products_viewmodel.dart';
 
@@ -27,10 +28,9 @@ class HomeScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) {
-                        final viewModel = ScannerViewModel(localProductRepository: context.read());
-                        return ScannerScreen(viewModel: viewModel);
-                      }
+                    builder: (context) {
+                      return ScannerScreen();
+                    },
                   ),
                 );
               },
@@ -41,13 +41,13 @@ class HomeScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) {
-                        final viewModel = RecipeFormViewmodel(
-                          recipeRepository: context.read(),
-                          tagRepository: context.read(),
-                        );
-                        return RecipeFormScreen(viewModel: viewModel);
-                      }
+                    builder: (context) {
+                      final viewModel = RecipeFormViewmodel(
+                        recipeRepository: context.read(),
+                        tagRepository: context.read(),
+                      );
+                      return RecipeFormScreen(viewModel: viewModel);
+                    },
                   ),
                 );
               },
@@ -58,10 +58,10 @@ class HomeScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) {
-                        final viewModel = AllProductsViewmodel(localProductRepository: context.read());
-                        return AllProductsScreen(viewModel: viewModel);
-                      }
+                    builder: (context) {
+                      final viewModel = AllProductsViewmodel(localProductRepository: context.read());
+                      return AllProductsScreen(viewModel: viewModel);
+                    },
                   ),
                 );
               },
@@ -72,10 +72,10 @@ class HomeScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) {
-                        final viewModel = AllRecipesViewmodel(recipeRepository: context.read());
-                        return AllRecipesScreen(viewModel: viewModel);
-                      }
+                    builder: (context) {
+                      final viewModel = AllRecipesViewmodel(recipeRepository: context.read());
+                      return AllRecipesScreen(viewModel: viewModel);
+                    },
                   ),
                 );
               },
@@ -86,21 +86,39 @@ class HomeScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) {
-                        final viewModel = PlannerViewmodel(
-                          mealPlanner: context.read(),
-                          sharedPreferencesService: context.read(),
-                          localProductRepository: context.read(),
-                          pantryItemRepository: context.read(),
-                          recipeRepository: context.read(),
-                          mealPlanRepository: context.read(),
-                        );
-                        return PlannerScreen(viewModel: viewModel);
-                      }
+                    builder: (context) {
+                      final viewModel = PlannerViewmodel(
+                        mealPlanner: context.read(),
+                        sharedPreferencesService: context.read(),
+                        localProductRepository: context.read(),
+                        pantryItemRepository: context.read(),
+                        recipeRepository: context.read(),
+                        mealPlanRepository: context.read(),
+                      );
+                      return PlannerScreen(viewModel: viewModel);
+                    },
                   ),
                 );
               },
               child: const Text('Meal plan'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) {
+                      final viewModel = ShoppingListViewmodel(
+                        shoppingListGenerator: context.read(),
+                        pantryItemRepository: context.read(),
+                        mealPlanRepository: context.read(),
+                      );
+                      return ShoppingListScreen(viewModel: viewModel);
+                    },
+                  ),
+                );
+              },
+              child: const Text('Shopping list'),
             ),
           ],
         ),

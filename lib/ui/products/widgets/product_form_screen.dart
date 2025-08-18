@@ -491,8 +491,8 @@ class _ProductFormScreenState extends State<ProductFormScreen > {
                       for (final unit in units) {
                         final name = unit.nameController.value.text;
                         final value = double.tryParse(unit.valueController.value.text);
-                        if (name.isNotEmpty && _isValidAmountRaw(value, true)) {
-                          unitsMap[name] = value!;
+                        if (name.trim().isNotEmpty && _isValidAmountRaw(value, true)) {
+                          unitsMap[name.trim()] = value!;
                         }
                       }
                       form.units = unitsMap;

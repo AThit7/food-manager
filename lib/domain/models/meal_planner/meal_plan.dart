@@ -25,7 +25,7 @@ class MealPlan {
     }
 
     log("Created new plan starting at ${dayZero.toString()}");
-    plan.map((e) => e.map((e2) => 'item uuid: ${e2.ingredients.values.firstOrNull?.firstOrNull?.item.uuid.substring(0,4)}' ?? e2.uuid.substring(0,4)).toString()).forEach(log);
+    plan.map((e) => e.map((e2) => 'item uuid: ${e2.ingredients.values.firstOrNull?.firstOrNull?.item.uuid.substring(0,4)}').toString()).forEach(log);
   }
 
   void clearPastDays(DateTime newDayZero, int newPlanLength) {

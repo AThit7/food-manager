@@ -29,10 +29,11 @@ abstract class _DatabaseServiceCore {
         int? offset,
       });
 
-  Future<List<Map<String, Object?>>> rawQuery(
-      String sql, [
-        List<Object?>? arguments
-      ]);
+  Future<List<Map<String, Object?>>> rawQuery(String sql, [List<Object?>? arguments]);
+
+  Future<int> rawDelete(String sql, [List<Object?>? arguments]);
+
+  Future<int> rawUpdate(String sql, [List<Object?>? arguments]);
 
   Future<int> delete(String table, {String? where, List<Object?>? whereArgs});
 

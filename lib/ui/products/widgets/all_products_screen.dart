@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:food_manager/ui/products/view_models/product_viewmodel.dart';
 import 'package:food_manager/ui/products/widgets/product_screen.dart';
+import 'package:provider/provider.dart';
 
 import '../view_models/all_products_viewmodel.dart';
 
@@ -56,9 +58,13 @@ class _AllProductsScreenState extends State<AllProductsScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => ProductScreen(
-                              product: product,
-                            ),
+                            builder: (context) {
+                              final viewModel = ProductViewmodel(
+                                localProductRepository: context.read(),
+                                product: product,
+                              );
+                              return ProductScreen(viewModel:viewModel);
+                            },
                           ),
                         );
                       },

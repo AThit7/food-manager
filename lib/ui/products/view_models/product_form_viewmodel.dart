@@ -33,11 +33,11 @@ class ProductFormViewmodel {
     try {
       product = LocalProduct(
         id: form.id,
-        name: form.name!,
-        tag: Tag(name: form.tag!),
-        barcode: form.barcode,
+        name: form.name!.trim(),
+        tag: Tag(name: form.tag!.trim()),
+        barcode: form.barcode?.trim(),
         units: Map.of(form.units!),
-        referenceUnit: form.referenceUnit!,
+        referenceUnit: form.referenceUnit!.trim(),
         referenceValue: double.parse(form.referenceValue!),
         containerSize: form.containerSize != null
             ? double.parse(form.containerSize!) : null ,

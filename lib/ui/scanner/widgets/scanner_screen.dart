@@ -4,15 +4,10 @@ import 'package:food_manager/ui/products/widgets/add_product_screen.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 
-import '../view_models/scanner_viewmodel.dart';
-
 class ScannerScreen extends StatefulWidget {
   const ScannerScreen({
     super.key,
-    required this.viewModel,
   });
-
-  final ScannerViewModel viewModel;
 
   @override
   State<ScannerScreen> createState() => _ScannerScreenState();
