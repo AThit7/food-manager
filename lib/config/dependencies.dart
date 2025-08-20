@@ -2,6 +2,7 @@ import 'package:food_manager/data/repositories/meal_plan_repository.dart';
 import 'package:food_manager/data/repositories/pantry_item_repository.dart';
 import 'package:food_manager/data/repositories/recipe_repository.dart';
 import 'package:food_manager/data/repositories/tag_repository.dart';
+import 'package:food_manager/data/services/database/database_service.dart';
 import 'package:food_manager/domain/models/meal_planner/meal_planner_config.dart';
 import 'package:food_manager/domain/services/meal_planner.dart';
 import 'package:food_manager/domain/services/shopping_list_generator.dart';
@@ -19,7 +20,7 @@ Future<List<SingleChildWidget>> initProviders() async {
 
   final sharedPreferencesService = SharedPreferencesService();
   await sharedPreferencesService.init();
-  final databaseService = DatabaseServiceSqflite();
+  final DatabaseService databaseService = DatabaseServiceSqflite();
   await databaseService.init();
   final productInfoService = ProductInfoService();
   final tagRepository = TagRepository(databaseService);

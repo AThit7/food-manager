@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:developer' as dev;
 
+import 'package:flutter/material.dart';
 import 'package:food_manager/domain/models/meal_planner/meal_plan.dart';
 import 'package:food_manager/domain/models/meal_planner/meal_plan_constraints.dart';
 import 'package:food_manager/domain/models/meal_planner/meal_planner_config.dart';
@@ -39,7 +40,6 @@ double _pantryItemScore(PantryItem item, DateTime date) {
   // prefer opened items, but keep unopened urgency meaningful
   final coeff = item.isOpen ? 1.0 : 0.4;
 
-  // Per-unit urgency; avoid dividing by 0
   return coeff / (1 + effectiveDaysLeft);
 }
 
@@ -185,7 +185,7 @@ class _PlanStep {
   final Recipe? recipe;
   final double score;
 
-  final List<({PantryItem item, double quantity})> usedItems; // TODO growable:false
+  final List<({PantryItem item, double quantity})> usedItems; // TODO growable:false?
 
   _PlanStep({
     required this.parent,
@@ -196,8 +196,7 @@ class _PlanStep {
 }
 
 // TODO:
-// add DB stuff
-// add Result wrapper like for repos
+// add Result wrapper like for repos?
 class MealPlanner {
   MealPlanner({required this.config});
 
@@ -224,11 +223,14 @@ class MealPlanner {
     // TODO:
     // add recipe.last_time_used
     // deep copy the currentPLan first?
-    // remove expired pantry items? already done but maybe rethink it
 
-    final tmp = DateTime.now();
-    final today = DateTime(tmp.year, tmp.month, tmp.day);
+    // ##################################################### PREPARE SOME GENERAL VALUES
+    final today = DateUtils.dateOnly(DateTime.now());
     currentPlan.clearPastDays(today, planLength);
+
+    pantryItems = pantryItems.where((i) => i.isBought).toList();
+    //dev.log("Items: ${pantryItems.map((e) => e.uuid.substring(0, 4))}");
+    // TODO prefilter recipes
 
     // ##################################################### PREPARE AUXILIARY TAG-[PRODUCT] MAP
 
@@ -276,16 +278,16 @@ class MealPlanner {
 
         for (final recipeIngredient in recipe.ingredients) {
           final matchingProducts = tagProductsMap[recipeIngredient.tag.name]?.where(
-                  (e) => e.units.containsKey(recipeIngredient.unit)).toList();
-          final pantryItems = pantry.getItems(
-              recipeIngredient.tag.name)?.where((e) => e.product.units.containsKey(recipeIngredient.unit)) ?? [];
+                  (e) => e.units.containsKey(recipeIngredient.unit)).toList() ?? [];
+          final pantryItems = pantry.getItems(recipeIngredient.tag.name)
+              ?.where((e) => e.product.units.containsKey(recipeIngredient.unit)) ?? [];
+          //dev.log(pantry.getItems(recipeIngredient.tag.name)?.map((e) => e.uuid.substring(0, 4)).toString() ?? "(-)");
+          //dev.log(pantryItems.map((e) => e.uuid.substring(0, 4)).toString());
 
           // a recipe with missing ingredients can't be used
-          if (matchingProducts == null || matchingProducts.isEmpty) continue recipesLoop;
+          if (matchingProducts.isEmpty) continue recipesLoop;
 
           double totalQuantity = 0;
-
-          bool lowerBoundSatisfied = false; // TODO remove this? it's complicated and awkward
 
           // pick the item(s) that maximizes the cost reduction, they're already sorted
           for (final pantryItem in pantryItems) {
@@ -305,7 +307,7 @@ class MealPlanner {
               takeRecipeUnits = convertedQuantity; // finish the item if it's within tolerance
             }
 
-            final usedBase = takeRecipeUnits * ratio; // grams/ml
+            final usedBase = takeRecipeUnits * ratio; // g/ml
             final leftoverBase = pantryItem.quantity - usedBase;
 
             pickedItems.add((item: pantryItem, quantity: usedBase));
@@ -318,12 +320,6 @@ class MealPlanner {
             }
 
             totalQuantity += takeRecipeUnits;
-
-            if (totalQuantity >= recipeIngredient.amount * (1 - acceptableError)) {
-              if (lowerBoundSatisfied) break;
-              lowerBoundSatisfied = true;
-              continue;
-            }
           }
 
           double remainingQuantityLow = recipeIngredient.amount * (1 - acceptableError) - totalQuantity;
@@ -331,6 +327,8 @@ class MealPlanner {
           double remainingQuantity = recipeIngredient.amount - totalQuantity;
 
           // if the total quantity is too small pick the best product that will fill in the gap
+
+          // add variable weight
           if (remainingQuantityLow > 0) {
             for (final product in matchingProducts) {
               assert (product.units[recipeIngredient.unit] != null);
@@ -364,6 +362,7 @@ class MealPlanner {
           }
 
           // TODO tweak or optimize?
+          // add full containers while they fit
           if (remainingQuantityLow > 0) {
             // because containerSize == null products should precede others
             final idx = matchingProducts.indexWhere((e) => e.containerSize != null);
@@ -407,6 +406,7 @@ class MealPlanner {
               totalQuantity += usedUp;
             }
 
+            // fill in with containers even if they don't fit
             if (remainingQuantityLow > 0) {
               if (productsWithContainerSize.isEmpty) continue recipesLoop;
               final product = productsWithContainerSize.first;
@@ -461,15 +461,15 @@ class MealPlanner {
 
     // ##################################################### FIND BEST PLAN
 
-    final pantry = _PantryState._(tagPantryItemsMap);
-    DateTime currentDayDate = today.subtract(Duration(days: 1));
+    var pantry = _PantryState.from(tagPantryItemsMap);
+    //dev.log("Initial pantry:${tagPantryItemsMap.values.expand((l) => l).map((e) => e.uuid.substring(0, 4)).toString()}");
 
     mainLoop:
     for (int i = 0; i < currentPlan.length; i++) {
       final day = currentPlan.plan[i];
-      currentDayDate = currentDayDate.add(Duration(days: 1));
+      final currentDayDate = today.add(Duration(days: i));
 
-      dev.log("Generating plan for ${currentDayDate.toString().split(" ").firstOrNull}");
+      dev.log("Generating plan for ${currentDayDate.toString().split(" ").firstOrNull}", name: 'MealPlanner');
 
       // ############ LOAD RECIPES FROM THE PLAN
       _PlanStep parentStep = _PlanStep(parent: null, recipe: null, usedItems: [], score: 0);
@@ -484,9 +484,8 @@ class MealPlanner {
       }
 
       // ############ INITIALIZE THE QUEUE
-      final startingStep = parentStep;
-
       final planQueue = PriorityQueue<_PlanStep>((a, b) => b.score.compareTo(a.score));
+      final startingStep = parentStep;
       planQueue.add(startingStep);
 
       // ############ BEST FIRST SEARCH
@@ -496,54 +495,86 @@ class MealPlanner {
         planQueue.removeFirst();
         final currentState = _PlanState.fromStep(currentStep, pantry, epsilon, currentDayDate);
 
-        dev.log("current state: [${currentState.calories} kcal]");
+        //dev.log("current state: [${currentState.calories} kcal]");
 
         bool inRange(num value, ({num lower, num upper}) range) =>
             range.lower <= value && value <= range.upper;
 
         // ############ IF THE DAILY PLAN SATISFIES THE CRITERIA ADD IT TO THE FINAL PLAN
-        if (//*inRange(currentState.chosenRecipes.length, currentPlan.mealsPerDayRange) && // TODO
+        if (inRange(currentState.chosenRecipes.length, currentPlan.mealsPerDayRange) &&
             inRange(currentState.calories, constraints.calorieRange) &&
             inRange(currentState.protein, constraints.proteinRange) &&
             inRange(currentState.carbs, constraints.carbsRange) &&
             inRange(currentState.fat, constraints.fatRange)) {
 
-          // ############ RECREATE THE MAP FOR MealPlanSlot
+          // ############ CREATE A LIST OF SLOTS FROM CURRENT STATE
           final slots = <MealPlanSlot>[];
 
           for (_PlanStep? step = currentStep; step != null; step = step.parent) {
             assert(step.recipe != null || step.parent == null);
             if(step.recipe == null) continue;
             final tagIngredientsMap = <String, List<({PantryItem item, double quantity})>>{};
+            double calories = 0;
+            double protein = 0;
+            double carbs = 0;
+            double fat = 0;
+
+            final normalizedByUuid = <String, PantryItem>{};
 
             for (final entry in step.usedItems) {
-              final tagName = entry.item.product.tag.name;
-              if (tagIngredientsMap.containsKey(tagName)) {
-                tagIngredientsMap[entry.item.product.tag.name]?.add((item: entry.item, quantity: entry.quantity));
+              final item = entry.item;
+              final product = item.product;
+              final tagName = product.tag.name;
+              final quantity = entry.quantity;
+              PantryItem normalizedItem = item.isBought || product.containerSize == null
+                  ? item
+                  : item.copyWith(quantity: product.containerSize);
+              normalizedItem = !item.isBought && product.expectedShelfLife != product.shelfLifeAfterOpening
+                  ? normalizedItem.copyWith(isOpen: false)
+                  : normalizedItem;
+
+              final fromMap = normalizedByUuid[item.uuid];
+              if (fromMap != null) {
+                normalizedItem = fromMap;
               } else {
-                tagIngredientsMap[entry.item.product.tag.name] = [(item: entry.item, quantity: entry.quantity)];
+                normalizedByUuid[item.uuid] = normalizedItem;
               }
+
+              if (tagIngredientsMap.containsKey(tagName)) {
+                tagIngredientsMap[product.tag.name]?.add((item: normalizedItem, quantity: quantity));
+              } else {
+                tagIngredientsMap[product.tag.name] = [(item: normalizedItem, quantity: quantity)];
+              }
+
+              calories += product.caloriesPerUnit * quantity;
+              protein += product.proteinPerUnit * quantity;
+              carbs += product.carbsPerUnit * quantity;
+              fat += product.fatPerUnit * quantity;
+
+              assert(item.isBought || product.containerSize == null || quantity <= product.containerSize! + epsilon);
             }
 
             // ############ ADD THE DAILY PLAN TO FINAL RESULT
             slots.add(MealPlanSlot(
               recipe: step.recipe!,
               ingredients: tagIngredientsMap,
-              calories: currentState.calories,
-              protein: currentState.protein,
-              carbs: currentState.carbs,
-              fat: currentState.fat,
+              calories: calories,
+              protein: protein,
+              carbs: carbs,
+              fat: fat,
               isEaten: false,
               isValid: true,
             ));
           }
+          //dev.log("Items for day $i: ${slots.map((e) => e.ingredients).expand((l) => l.values).expand((l) => l).map((e) => e.item.uuid.substring(0, 5)).toString()}");
           currentPlan.plan[i] = slots;
           currentPlan.waste[i] = currentState.waste;
 
+          pantry = currentState.pantry;
           continue mainLoop;
-        } else if (currentState.chosenRecipes.length >= currentPlan.mealsPerDayRange.upper) {
-          continue;
         }
+        // TODO add more conditions?
+        if (currentState.chosenRecipes.length >= currentPlan.mealsPerDayRange.upper) continue;
 
         // ############ LOAD AND RECREATE THE PlanState
         final newSteps = expandPlan(currentState);
@@ -554,6 +585,18 @@ class MealPlanner {
     }
 
     // ##################################################### RETURN RESULT
+    // TODO remove
+    /*for (final slot in currentPlan.plan[0]) {
+      for (final comps in slot.ingredients.values) {
+        for (final c in comps.where((c) => !c.item.isBought)) {
+          final size = c.item.product.containerSize;
+          final iQty = c.item.quantity;
+          final used = c.quantity;
+          dev.log('GEN to-buy uuid=${c.item.uuid.substring(0,4)} pack=$size itemQty=$iQty used=$used', name: 'Planner');
+        }
+      }
+    }*/
+
     return currentPlan;
   }
 }

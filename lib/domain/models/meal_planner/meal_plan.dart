@@ -65,7 +65,7 @@ class MealPlan {
 
   List<MealPlanSlot>? getDate(DateTime date) {
     final index = date.difference(dayZero).inDays;
-    log("Getting date ${date.toString()} => day: $index");
+    //log("Getting date ${date.toString()} => day: $index");
     if (index < 0 || index >= plan.length) return null;
     return List.unmodifiable(plan[index]);
   }

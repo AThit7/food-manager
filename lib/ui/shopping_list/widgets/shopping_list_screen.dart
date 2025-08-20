@@ -155,13 +155,13 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
         listenable: viewModel,
         builder: (context, child) {
           if (viewModel.isLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: Text('Generating shopping list'));
           } else if (viewModel.errorMessage != null) {
-            return const Center(child: Text("Something went wrong."));
+            return const Center(child: Text('Something went wrong.'));
           } else if (viewModel.entries != null) {
             final grouped = viewModel.getGroupedEntries(until, groupByTag: groupByTag);
 
-            if (grouped.isEmpty) return const Center(child: Text("No items to buy."));
+            if (grouped.isEmpty) return const Center(child: Text('No items to buy.'));
             return ListView.builder(
               itemCount: grouped.length,
               itemBuilder: (context, i) {
@@ -176,6 +176,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                     child: ExpansionTile(
                       key: PageStorageKey("group_${groupByTag ? group.tag : group.date}"),
                       title: Text(header),
+                      expansionAnimationStyle: AnimationStyle.noAnimation,
                       children: [
                         Row(
                           children: [

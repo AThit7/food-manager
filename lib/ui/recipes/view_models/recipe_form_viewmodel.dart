@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer';
 
 import 'package:flutter/cupertino.dart';
+import 'package:food_manager/core/exceptions/exceptions.dart';
 import 'package:food_manager/core/result/repo_result.dart';
 import 'package:food_manager/data/repositories/tag_repository.dart';
 import 'package:food_manager/domain/models/recipe_ingredient.dart';
@@ -24,7 +25,11 @@ class InsertSuccess extends InsertResult {
 
 class InsertRepoFailure extends InsertResult {}
 
-class InsertValidationFailure extends InsertResult {}
+class InsertValidationFailure extends InsertResult {
+  final String message;
+  
+  InsertValidationFailure(this.message);
+}
 
 class RecipeFormViewmodel extends ChangeNotifier {
   RecipeFormViewmodel({
@@ -42,11 +47,11 @@ class RecipeFormViewmodel extends ChangeNotifier {
   Fuzzy<String> _tagsFuse = Fuzzy<String>([]);
   Map<String, Fuzzy<String>> _unitFuseMap = {};
 
-  get tags => List.unmodifiable(_tagUnitsMap.keys);
+  get tags => List<String>.unmodifiable(_tagUnitsMap.keys);
   get isLoadingTags => _isLoadingTags;
   get errorMessage => _errorMessage;
 
-  List<String> getUnits(String tag) => List.unmodifiable(_tagUnitsMap[tag]?.units ?? []); // TODO: maybe null instead of empty
+  List<String> getUnits(String tag) => List<String>.unmodifiable(_tagUnitsMap[tag]?.units ?? []); // TODO: maybe null instead of empty
 
   Iterable<String> tagSearch(String tag) {
     return _tagsFuse.search(tag).map((e) => e.item);
@@ -67,21 +72,22 @@ class RecipeFormViewmodel extends ChangeNotifier {
     Recipe recipe;
     try {
       if (form.name == null || form.ingredients == null || form.preparationTime == null) {
-        throw ArgumentError("Required form fields were null. Form: ${form.name} "
-            "${form.ingredients?.isEmpty.toString()} ${form.preparationTime}");
+        throw ArgumentError('Required form fields were null');
+      }
+      if (form.ingredients!.length != form.ingredients!.map((e) => e.tag).toSet().length) {
+        throw ArgumentError('Ingredient names cannot repeat');
       }
 
       final recipeIngredients = <RecipeIngredient>[];
       for (final ingredientData in form.ingredients!) {
         if (ingredientData.tag == null || ingredientData.unit == null || ingredientData.amount == null) {
-          throw ArgumentError("Required form ingredient fields were null.");
+          throw ArgumentError('Required form ingredient fields were null');
         }
         recipeIngredients.add(RecipeIngredient(
           tag: Tag(name: ingredientData.tag!, id: _tagUnitsMap[ingredientData.tag]?.id),
           unit: ingredientData.unit!,
           amount: double.parse(ingredientData.amount!),
         ));
-
       }
 
       recipe = Recipe(
@@ -101,7 +107,10 @@ class RecipeFormViewmodel extends ChangeNotifier {
         name: "RecipeFormViewmodel",
         error: e,
       );
-      return InsertValidationFailure();
+      String? msg = e is ArgumentError ? e.message : null;
+      msg ??= e is ValidationError ? e.message : null;
+      
+      return InsertValidationFailure(msg ?? 'Could not validate recipe');
     }
 
     if (recipe.id == null) {
@@ -215,8 +224,8 @@ class RecipeFormViewmodel extends ChangeNotifier {
     final parsedAmountString = amount?.toStringAsFixed(2).replaceAll(RegExp(r'\.?0+$'), '');
 
     // TODO: adjust weight(s)?
-    final unitWeight = 0.5;
-    final tagWeight = 1.0;
+    final unitWeight = 0.3;
+    final tagWeight = 1.2;
     final noUnitPenalty = 0.7;
 
     final words = rest.split(' ');

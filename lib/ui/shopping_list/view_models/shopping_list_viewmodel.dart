@@ -4,7 +4,7 @@ import 'package:food_manager/core/result/repo_result.dart';
 import 'package:food_manager/data/repositories/meal_plan_repository.dart';
 import 'package:food_manager/data/repositories/pantry_item_repository.dart';
 import 'package:food_manager/domain/models/meal_planner/meal_plan.dart';
-import 'package:food_manager/domain/models/shopping_list/shopping_list_entry.dart';
+import 'package:food_manager/domain/models/shopping_list_entry.dart';
 import 'package:food_manager/domain/services/shopping_list_generator.dart';
 import 'package:food_manager/domain/validators/pantry_item_validator.dart';
 
@@ -102,6 +102,7 @@ class ShoppingListViewmodel extends ChangeNotifier {
     if (mealPlan == null) {
       return errorMessage ?? "No meal plan to generate the shopping list for.";
     }
+
     this.entries = _shoppingListGenerator.generateList(plan: mealPlan!);
 
     return null;

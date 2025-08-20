@@ -43,6 +43,10 @@ abstract class _DatabaseServiceCore {
 abstract class DatabaseService extends _DatabaseServiceCore {
   Future<void> init();
 
+  Future<void> exportToFile(String destPath);
+
+  Future<void> importFromFile(String sourcePath);
+
   Future<T> transaction<T>(Future<T> Function(DbTransaction txn) action, {bool? exclusive});
 }
 

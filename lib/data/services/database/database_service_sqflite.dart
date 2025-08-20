@@ -1,10 +1,12 @@
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:food_manager/data/database/schema/meal_plan_schema.dart';
 import 'package:food_manager/data/database/schema/pantry_item_schema.dart';
 import 'package:food_manager/data/database/schema/recipe_ingredient_schema.dart';
 import 'package:food_manager/data/database/schema/recipe_schema.dart';
 import 'package:food_manager/data/database/schema/tag_schema.dart';
+//import 'package:food_manager/utils/seed_products.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
@@ -19,15 +21,17 @@ final Map<DbConflictAlgorithm, ConflictAlgorithm> _conflictMap = const {
 
 class DatabaseServiceSqflite implements DatabaseService {
   Database? _unsafeDb;
-  Database get _db => _unsafeDb ?? (throw StateError("Call 'init()' first."));
+  String? _unsafePath;
+  Database get _db => _unsafeDb ?? (throw StateError('Call init() first'));
+  String get _dbPath => _unsafePath ?? (throw StateError('Call init() first'));
 
   @override
   Future<void> init() async {
-    final dbPath = join(await getDatabasesPath(), 'user_data.db');
+    _unsafePath = join(await getDatabasesPath(), 'user_data.db');
     //await deleteDatabase(dbPath); // TODO: remove later
 
     _unsafeDb = await openDatabase(
-      dbPath,
+      _dbPath,
       onConfigure: (db) async {
         await db.execute("PRAGMA foreign_keys = ON");
       },
@@ -58,6 +62,9 @@ class DatabaseServiceSqflite implements DatabaseService {
       );
     }
 
+    // seed
+    // await seedProductsFromList(this);
+
     await _db.transaction((txn) async {
       await txn.rawDelete('''
       DELETE FROM ${TagSchema.table}
@@ -84,6 +91,101 @@ class DatabaseServiceSqflite implements DatabaseService {
     PantryItemSchema.createIndexes.forEach(batch.execute);
     RecipeIngredientSchema.createIndexes.forEach(batch.execute);
     await batch.commit(noResult: true);
+  }
+
+  String _safePath(String p) {
+    final escaped = p.replaceAll("'", "''"); // '' is the escaped version of '
+    return "'$escaped'";
+  }
+
+  @override
+  Future<void> exportToFile(String destPath) async {
+    if (_unsafeDb == null) throw StateError('DB not initialized');
+    if (destPath == _dbPath) {
+      throw ArgumentError('destPath must differ from current DB path');
+    }
+    if (!await Directory(dirname(destPath)).exists()) {
+      throw ArgumentError('destPath ${dirname(destPath)} does not exist');
+    }
+
+    final quoted = _safePath(destPath);
+    try {
+      await _db.execute('VACUUM INTO $quoted');
+      log('Exported to: $destPath', name: 'DatabaseService');
+    } catch (e) {
+      log('Export failed: $e', name: 'DatabaseService', level: 900);
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> importFromFile(String sourcePath) async {
+    if (!await File(sourcePath).exists()) {
+      throw ArgumentError('Import source does not exist: $sourcePath');
+    }
+
+    await _unsafeDb?.close();
+    _unsafeDb = null;
+
+    final backupPath = '$_dbPath.bak';
+    try {
+      if (await File(_dbPath).exists()) await File(_dbPath).copy(backupPath);
+    } catch (e) {
+      log('Backup failed: $e', name: 'DatabaseService', level: 900);
+      _unsafeDb = await openDatabase(
+        _dbPath,
+        onConfigure: (db) async => db.execute('PRAGMA foreign_keys = ON'),
+        version: 1,
+      );
+      final b = File(backupPath);
+      if (await b.exists()) {
+        try { await b.delete(); } catch (_) {}
+      }
+      rethrow;
+    }
+
+    try {
+      await File(sourcePath).copy(_dbPath);
+
+      for (final ext in const ['-wal', '-shm']) {
+        final f = File('$_dbPath$ext');
+        if (await f.exists()) await f.delete();
+      }
+
+      _unsafeDb = await openDatabase(
+        _dbPath,
+        onConfigure: (db) async => db.execute('PRAGMA foreign_keys = ON'),
+        version: 1,
+      );
+
+      final integrity = await _db.rawQuery('PRAGMA integrity_check;');
+      final foreign = await _db.rawQuery('PRAGMA foreign_key_check;');
+      final okIntegrity = integrity.isNotEmpty && integrity.first.values.first == 'ok';
+      final okForeign = foreign.isEmpty;
+      if (!okIntegrity || !okForeign) throw StateError('Integrity/foreign key check failed for the new DB');
+
+      log('Import succeeded from $sourcePath', name: 'DatabaseService');
+    } catch (e, st) {
+      log('Import failed, restoring backup: $e', name: 'DatabaseService', error: st, level: 1000);
+
+      if (await File(backupPath).exists()) {
+        await File(backupPath).copy(_dbPath);
+      }
+
+      _unsafeDb ??= await openDatabase(
+        _dbPath,
+        onConfigure: (db) async => db.execute('PRAGMA foreign_keys = ON'),
+        onCreate: _onCreate,
+        version: 1,
+      );
+
+      rethrow;
+    } finally {
+      final b = File(backupPath);
+      if (await b.exists()) {
+        try { await b.delete(); } catch (_) {}
+      }
+    }
   }
 
   @override

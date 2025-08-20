@@ -62,6 +62,8 @@ class _Ingredient {
     }
     else if (!_isValidAmount(amount)) {
       errorMessage = 'Invalid amount.';
+    } else {
+      errorMessage = null;
     }
   }
 
@@ -299,11 +301,11 @@ class _RecipeFormState extends State<RecipeFormScreen> {
               onTap: isSubmitting ? null : () {
                 setState(() {
                   ingredient.isEditable = false;
+                  ingredient.tag = ingredient.tagController.value.text;
+                  ingredient.unit = ingredient.unitController.value.text;
+                  ingredient.amount = ingredient.amountController.value.text;
+                  ingredient.validate();
                 });
-                ingredient.tag = ingredient.tagController.value.text;
-                ingredient.unit = ingredient.unitController.value.text;
-                ingredient.amount = ingredient.amountController.value.text;
-                ingredient.validate();
               },
               borderRadius: BorderRadius.circular(999),
               child: Padding(
@@ -548,7 +550,6 @@ class _RecipeFormState extends State<RecipeFormScreen> {
                             FocusScope.of(context).unfocus();
                             setState(() { isParsingIngredients = true; });
                             _loadIngredients(ingredientsFieldController.value.text);
-                            await Future.delayed(const Duration(seconds: 2));
                             ingredientsFieldController.clear();
                             setState(() { isParsingIngredients = false; });
                           },
@@ -645,12 +646,14 @@ class _RecipeFormState extends State<RecipeFormScreen> {
 
                         switch (result) {
                           case InsertSuccess():
+                            ScaffoldMessenger.of(context)
+                                .showSnackBar(const SnackBar(content: Text('Recipe added successfully')));
                             Navigator.pop(context, result.recipe);
                           case InsertValidationFailure():
-                            ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Failed to add recipe. Invalid recipe details.')));
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.message)));
                           case InsertRepoFailure():
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Unexpected error.')));
+                            ScaffoldMessenger.of(context)
+                                .showSnackBar(const SnackBar(content: Text('Unexpected error')));
                         }
 
                         setState(() => isSubmitting = false);

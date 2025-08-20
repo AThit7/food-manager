@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:food_manager/core/result/repo_result.dart';
 
@@ -19,7 +20,7 @@ class AllProductsViewmodel extends ChangeNotifier {
   String? errorMessage;
   bool isLoading = false;
 
-  List<LocalProduct> get products => List.unmodifiable(_products);
+  List<LocalProduct> get products => List.unmodifiable(_products.sorted((a, b) => a.name.compareTo(b.name)));
 
   void _onProductEvent(ProductEvent event) {
     switch (event) {

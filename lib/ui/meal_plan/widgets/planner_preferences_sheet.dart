@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:food_manager/ui/planner/view_models/planner_viewmodel.dart';
+import 'package:food_manager/ui/meal_plan/view_models/planner_viewmodel.dart';
 
 Future<void> showPlannerPreferencesSheet(
     BuildContext context,
@@ -56,25 +56,25 @@ class _PlannerPreferencesSheetState extends State<PlannerPreferencesSheet> {
   @override
   void initState() {
     super.initState();
-    final vm = widget.viewModel;
+    final viewModel = widget.viewModel;
 
-    final meals = vm.mealCountRange;
+    final meals = viewModel.mealCountRange;
     _mealsLo = meals.lower.clamp(mealsMin, mealsMax);
     _mealsHi = meals.upper.clamp(mealsMin, mealsMax);
 
-    final cal = vm.calorieRange;
+    final cal = viewModel.calorieRange;
     _kcalLo = cal.lower.clamp(kcalMin, kcalMax);
     _kcalHi = cal.upper.clamp(kcalMin, kcalMax);
 
-    final pr = vm.proteinRange;
+    final pr = viewModel.proteinRange;
     _protLo = pr.lower.clamp(proteinMin, proteinMax);
     _protHi = pr.upper.clamp(proteinMin, proteinMax);
 
-    final cb = vm.carbsRange;
+    final cb = viewModel.carbsRange;
     _carbLo = cb.lower.clamp(carbsMin, carbsMax);
     _carbHi = cb.upper.clamp(carbsMin, carbsMax);
 
-    final ft = vm.fatRange;
+    final ft = viewModel.fatRange;
     _fatLo = ft.lower.clamp(fatMin, fatMax);
     _fatHi = ft.upper.clamp(fatMin, fatMax);
 
@@ -203,8 +203,7 @@ class _PlannerPreferencesSheetState extends State<PlannerPreferencesSheet> {
       return;
     }
 
-    final vm = widget.viewModel;
-    await vm.savePreferences(
+    await widget.viewModel.savePreferences(
       mealCountRang: (lower: _mealsLo, upper: _mealsHi),
       calorieRange:  (lower: _kcalLo,  upper: _kcalHi),
       proteinRange:  (lower: _protLo,  upper: _protHi),

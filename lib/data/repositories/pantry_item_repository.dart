@@ -1,6 +1,7 @@
 import 'dart:developer';
 
 import 'package:food_manager/data/database/schema/tag_schema.dart';
+import 'package:food_manager/data/database/schema/unit_schema.dart';
 import 'package:food_manager/domain/models/tag.dart';
 
 import '../../core/result/repo_result.dart';
@@ -80,7 +81,6 @@ class PantryItemRepository{
       throw ArgumentError('Product must have an ID when updating.');
     }
     if (!PantryItemValidator.isValid(item)) {
-      log(pantryItemToMap(item).toString());
       throw ArgumentError('Pantry item has invalid fields.');
     }
 
@@ -118,6 +118,7 @@ class PantryItemRepository{
       const String productId = "product_id";
       const String tagId = "tag_id";
       const String tagName = "tag_name";
+      const String unitName = "unit_name";
 
       final List<Map<String, Object?>> rows = await _db.rawQuery('''
       SELECT 
@@ -140,44 +141,55 @@ class PantryItemRepository{
         p.${ProductSchema.expectedShelfLife},
         p.${ProductSchema.shelfLifeAfterOpening},
         t.${TagSchema.id} AS $tagId,
-        t.${TagSchema.name} AS $tagName
+        t.${TagSchema.name} AS $tagName,
+        u.${UnitSchema.name} AS $unitName,
+        u.${UnitSchema.multiplier}
       FROM ${PantryItemSchema.table} i
       INNER JOIN ${ProductSchema.table} p
         ON i.${PantryItemSchema.productId} = p.${ProductSchema.id} 
       INNER JOIN ${TagSchema.table} t
         ON p.${ProductSchema.tagId} = t.${TagSchema.id} 
+      INNER JOIN ${UnitSchema.table} u
+        ON p.${ProductSchema.id} = u.${UnitSchema.productId} 
     ''');
 
-      final List<PantryItem> pantryItems = rows.map((row) {
-        final product = LocalProduct(
-          id: row[productId] as int,
-          barcode: row[ProductSchema.barcode] as String?,
-          name: row[ProductSchema.name] as String,
-          tag: Tag(id: row[tagId] as int, name: row[tagName] as String),
-          referenceUnit: row[ProductSchema.referenceUnit] as String,
-          referenceValue: row[ProductSchema.referenceValue] as double,
-          containerSize: row[ProductSchema.containerSize] as double?,
-          calories: row[ProductSchema.calories] as double,
-          carbs: row[ProductSchema.carbs] as double,
-          protein: row[ProductSchema.protein] as double,
-          fat: row[ProductSchema.fat] as double,
-          shelfLifePostOpening: row[ProductSchema.shelfLifeAfterOpening] as int,
-          expectedShelfLife: row[ProductSchema.expectedShelfLife] as int,
-          units: {},
-        );
+      final items = <int, PantryItem>{};
+      for (final row in rows) {
+        final id = row[itemId] as int;
+        var item = items[id];
 
-        return PantryItem.withUuid(
-          id: row[itemId] as int,
-          uuid: row[PantryItemSchema.uuid] as String,
-          product: product,
-          quantity: row[PantryItemSchema.quantity] as double,
-          expirationDate: DateTime.fromMillisecondsSinceEpoch(row[PantryItemSchema.expirationDate] as int),
-          isOpen: boolFromSql(row[PantryItemSchema.isOpen]),
-          isBought: boolFromSql(row[PantryItemSchema.isBought]),
-        );
-      }).toList();
+        if (item == null) {
+          final product = LocalProduct(
+            id: row[productId] as int,
+            barcode: row[ProductSchema.barcode] as String?,
+            name: row[ProductSchema.name] as String,
+            tag: Tag(id: row[tagId] as int, name: row[tagName] as String),
+            referenceUnit: row[ProductSchema.referenceUnit] as String,
+            referenceValue: row[ProductSchema.referenceValue] as double,
+            containerSize: row[ProductSchema.containerSize] as double?,
+            calories: row[ProductSchema.calories] as double,
+            carbs: row[ProductSchema.carbs] as double,
+            protein: row[ProductSchema.protein] as double,
+            fat: row[ProductSchema.fat] as double,
+            shelfLifePostOpening: row[ProductSchema.shelfLifeAfterOpening] as int,
+            expectedShelfLife: row[ProductSchema.expectedShelfLife] as int,
+            units: {},
+          );
+          item = PantryItem.withUuid(
+            id: id,
+            uuid: row[PantryItemSchema.uuid] as String,
+            product: product,
+            quantity: row[PantryItemSchema.quantity] as double,
+            expirationDate: DateTime.fromMillisecondsSinceEpoch(row[PantryItemSchema.expirationDate] as int),
+            isOpen: boolFromSql(row[PantryItemSchema.isOpen]),
+            isBought: boolFromSql(row[PantryItemSchema.isBought]),
+          );
+          items[id] = item;
+        }
+        item.product.units[row[unitName] as String] = row[UnitSchema.multiplier] as double;
+      }
 
-      return RepoSuccess(pantryItems);
+      return RepoSuccess(items.values.toList());
     } catch (e, s) {
       log(
         'Unexpected error when listing pantry items.',

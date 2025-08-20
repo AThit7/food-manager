@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:food_manager/domain/models/meal_planner/meal_plan.dart';
 import 'package:food_manager/domain/models/pantry_item.dart';
-import 'package:food_manager/ui/planner/view_models/planner_viewmodel.dart';
-import 'package:food_manager/ui/planner/widgets/planner_preferences_sheet.dart';
+import 'package:food_manager/ui/meal_plan/view_models/planner_viewmodel.dart';
+import 'package:food_manager/ui/meal_plan/widgets/planner_preferences_sheet.dart';
 
 class DaySummaryCard extends StatelessWidget {
   const DaySummaryCard({
@@ -227,7 +227,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     const weekdays = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
     final wd = weekdays[(d.weekday - DateTime.monday) % 7];
-    return '$wd, ${months[d.month-1]} ${d.day}';
+    return '$wd, ${d.day} ${months[d.month-1]}';
   }
 
   int _idxFor(DateTime d, MealPlan p) => (d.difference(p.dayZero).inDays).clamp(0, p.length - 1);
@@ -275,7 +275,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
         builder: (context, child) {
           final plan = widget.viewModel.mealPlan;
           if (viewModel.isLoading) {
-            return Center(child: const CircularProgressIndicator());
+            return const Center(child: Text("Generating plan..."));
           } else if (viewModel.errorMessage != null) {
             return Center(child: Text(viewModel.errorMessage!));
           } else if (plan != null) {

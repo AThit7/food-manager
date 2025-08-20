@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:food_manager/ui/pantry_item/view_models/pantry_item_form_viewmodel.dart';
+import 'package:food_manager/ui/pantry_item/widgets/pantry_item_form_screen.dart';
 import 'package:food_manager/ui/products/models/product_form_model.dart';
 import 'package:food_manager/ui/products/view_models/product_viewmodel.dart';
 import 'package:food_manager/ui/products/widgets/product_form_screen.dart';
@@ -57,20 +59,33 @@ class _ProductScreenState extends State<ProductScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text(product.name),
+          title: Text(product.name, overflow: TextOverflow.ellipsis),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.shopping_cart_checkout),
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) {
+                      final viewModel = PantryItemFormViewmodel(product: product, pantryItemRepository: context.read());
+                      return PantryItemFormScreen(viewModel: viewModel);
+                    },
+                  ),
+                );
+              },
+            ),
             IconButton(
               icon: const Icon(Icons.edit),
               onPressed: () async {
                 final updatedProduct = await Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => ProductFormScreen(
-                      form: ProductFormModel.fromLocalProduct(product),
-                      viewModel: ProductFormViewmodel(
-                        localProductRepository: context.read(),
-                      ),
-                    ),
+                    builder: (context) {
+                      final viewModel = ProductFormViewmodel(localProductRepository: context.read());
+                      final form = ProductFormModel.fromLocalProduct(product);
+                      return ProductFormScreen(viewModel: viewModel, form: form);
+                    },
                   ),
                 );
                 if (updatedProduct != null) {
@@ -135,10 +150,7 @@ class _ProductScreenState extends State<ProductScreen> {
                 ),
               ),
             ),
-
             const SizedBox(height: 12),
-
-            // --- Units / conversions ---
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),

@@ -115,6 +115,8 @@ class _ProductFormScreenState extends State<ProductFormScreen > {
     } else {
       form = ProductFormModel();
     }
+    form.referenceValue ??= '100';
+    form.referenceUnit ??= 'g';
     hasContainer = form.containerSize != null;
     containerSizeController = TextEditingController(text: form.containerSize);
 
@@ -248,18 +250,24 @@ class _ProductFormScreenState extends State<ProductFormScreen > {
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: TextFormField( // TODO has to be either g or ml
-                      decoration: const InputDecoration(
-                          labelText: "Unit",
-                          hintText: 'ex. g, ml'
+                    child: DropdownButtonFormField<String>(
+                      borderRadius: BorderRadius.circular(12),
+                      isExpanded: false,
+                      decoration: InputDecoration(
+                        labelText: 'Unit',
+                        enabled: !isSubmitting,
                       ),
-                      enabled: !isSubmitting,
-                      initialValue: form.referenceUnit,
-                      onChanged: (String? value) =>
-                          setState(() {
-                            form.referenceUnit = value ?? "";
-                          }),
-                      validator: _stringFieldValidator,
+                      value: form.referenceUnit,
+                      items: const ['g', 'ml'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                      onChanged: isSubmitting ? null : (value) {
+                        setState(() {
+                          form.referenceUnit = value!;
+                        });
+                      },
+                      validator: (_) {
+                        if (const ['g', 'ml'].contains(form.referenceUnit)) return null;
+                        return 'Invalid unit';
+                      },
                     ),
                   ),
                 ],

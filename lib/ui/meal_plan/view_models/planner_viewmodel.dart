@@ -1,6 +1,6 @@
 import 'dart:developer';
 
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:food_manager/core/result/repo_result.dart';
 import 'package:food_manager/data/repositories/local_product_repository.dart';
 import 'package:food_manager/data/repositories/meal_plan_repository.dart';
@@ -164,13 +164,13 @@ class PlannerViewmodel extends ChangeNotifier {
       pantryItems: pantryItems,
       recipes: recipes,
       constraints: MealPlanConstraints(
-        calorieRange: (lower: _preferences.upperCarbs ?? 1500, upper: _preferences.upperCalories ?? 5000),
-        proteinRange: (lower: _preferences.upperProtein ?? 0, upper: _preferences.upperCalories ?? 1000),
-        carbsRange: (lower: _preferences.upperCarbs ?? 0, upper: _preferences.upperCalories ?? 1000),
-        fatRange: (lower: _preferences.upperFat ?? 0, upper: _preferences.upperCalories ?? 1000),
+        calorieRange: (lower: _preferences.lowerCalories ?? 1500, upper: _preferences.upperCalories ?? 5000),
+        proteinRange: (lower: _preferences.lowerProtein ?? 0, upper: _preferences.upperProtein ?? 1000),
+        carbsRange: (lower: _preferences.lowerCarbs ?? 0, upper: _preferences.upperCarbs ?? 1000),
+        fatRange: (lower: _preferences.lowerFat ?? 0, upper: _preferences.upperFat ?? 1000),
       ),
       currentPlan: MealPlan(
-        dayZero: DateTime.now(),
+        dayZero: DateUtils.dateOnly(DateTime.now()),
         mealsPerDayRange: (lower: _preferences.lowerMealCount ?? 3, upper: _preferences.upperMealCount ?? 5),
         plan: [],
         waste: [],
