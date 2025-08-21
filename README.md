@@ -9,4 +9,4 @@ it's mostly unnecessary but theoretically we can now easily replace it with a di
 of DatabaseService
 * `/domain/model/product/local_product` vs `/domain/model/pantry_item` -> LocalProduct represents 
 abstract product, like spaghetti pasta of a specific brand. PantryItem is an instance of such product,
-either bought or in plans to buy.
+either bought or in plans to be bought.
