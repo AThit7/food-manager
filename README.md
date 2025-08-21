@@ -10,5 +10,5 @@ of DatabaseService
 * `/domain/model/product/local_product` vs `/domain/model/pantry_item` -> LocalProduct represents 
 abstract product, like spaghetti pasta of a specific brand. PantryItem is an instance of such product,
 either bought or in plans to be bought.
-* `Product.tag.name` is a string which recipe ingredient parser will use when trying to match products to
+* `Product.tag.name` is a string which the app will use when trying to match products to
 ingredient. If there's a recipe with ingredient name that does not match any tag, such recipe will never be used.
