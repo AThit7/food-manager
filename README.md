@@ -8,5 +8,5 @@ Stuff that might require explaining:
 it's mostly unnecessary but theoretically we can now easily replace it with a different implementation
 of DatabaseService
 * `/domain/model/product/local_product` vs `/domain/model/pantry_item` -> LocalProduct represents 
-abstract product, Like spaghetti pasta of a specific brand. PantryItem is an instance of product,
+abstract product, like spaghetti pasta of a specific brand. PantryItem is an instance of such product,
 either bought or in plans to buy.
