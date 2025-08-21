@@ -19,14 +19,22 @@ class Recipe {
     required this.lastTimeUsed,
   });
 
-  Recipe copyWith({int? id}) {
+  Recipe copyWith({
+    int? id,
+    String? name,
+    List<RecipeIngredient>? ingredients,
+    int? preparationTime,
+    String? instructions,
+    int? timesUsed,
+    DateTime? lastTimeUsed,
+  }) {
     return Recipe(
       id: id ?? this.id,
-      name: name,
-      ingredients: ingredients,
-      preparationTime: preparationTime,
-      instructions: instructions,
-      timesUsed: timesUsed,
+      name: name ?? this.name,
+      ingredients: ingredients ?? this.ingredients,
+      preparationTime: preparationTime ?? this.preparationTime,
+      instructions: instructions ?? this.instructions,
+      timesUsed: timesUsed ?? this.timesUsed,
       lastTimeUsed: lastTimeUsed,
     );
   }

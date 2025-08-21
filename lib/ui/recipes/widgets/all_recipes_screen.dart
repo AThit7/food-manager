@@ -28,7 +28,7 @@ class _AllRecipesScreenState extends State<AllRecipesScreen> {
   Widget build(BuildContext context) {
     final viewModel = widget.viewModel;
     return Scaffold(
-      appBar: AppBar(title: const Text('Recipe details')),
+      appBar: AppBar(title: const Text('Recipes')),
       body: ListenableBuilder(
         listenable: viewModel,
         builder: (context, child) {

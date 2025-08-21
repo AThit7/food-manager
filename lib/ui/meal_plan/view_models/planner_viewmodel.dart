@@ -39,6 +39,7 @@ class PlannerViewmodel extends ChangeNotifier {
   bool isLoading = false;
   String? errorMessage;
   MealPlan? mealPlan;
+  DateTime selectedDate = DateUtils.dateOnly(DateTime.now());
 
   ({int lower, int upper}) get mealCountRange =>
       (lower: _preferences.lowerMealCount ?? 3, upper: _preferences.upperMealCount ?? 5);
@@ -206,7 +207,7 @@ class PlannerViewmodel extends ChangeNotifier {
       if (item ==  null) throw StateError("Meal Plan item not in DB.");
 
       final leftoverQuantity = item.quantity - quantity;
-      if (leftoverQuantity < 0.000001) {
+      if (leftoverQuantity < 1e9) {
         log("Removing item from recipe ${slot.recipe.name}");
         _itemRepository.removeItem(item);
       } else {
@@ -219,6 +220,13 @@ class PlannerViewmodel extends ChangeNotifier {
 
     final planResult = await _mealPlanRepository.savePlan(mealPlan!);
     if (planResult is RepoError) errorMessage = planResult.message;
+
+    final modifiedRecipe = slot.recipe.copyWith(
+      lastTimeUsed: DateUtils.dateOnly(DateTime.now()),
+      timesUsed: slot.recipe.timesUsed + 1,
+    );
+    final recipeResult = await _recipeRepository.updateRecipe(modifiedRecipe);
+    if (recipeResult is RepoError) errorMessage = recipeResult.message;
 
     isLoading = false;
     notifyListeners();

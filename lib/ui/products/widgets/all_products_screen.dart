@@ -28,7 +28,7 @@ class _AllProductsScreenState extends State<AllProductsScreen> {
   Widget build(BuildContext context) {
     final viewModel = widget.viewModel;
     return Scaffold(
-      appBar: AppBar(title: const Text('Product details')),
+      appBar: AppBar(title: const Text('Products')),
       body: ListenableBuilder(
         listenable: viewModel,
         builder: (context, child) {

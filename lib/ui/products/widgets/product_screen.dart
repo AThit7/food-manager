@@ -120,7 +120,7 @@ class _ProductScreenState extends State<ProductScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(product.name, style: Theme.of(context).textTheme.titleLarge),
+                    _section('Summary'),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,

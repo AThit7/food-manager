@@ -27,7 +27,7 @@ class InsertRepoFailure extends InsertResult {}
 
 class InsertValidationFailure extends InsertResult {
   final String message;
-  
+
   InsertValidationFailure(this.message);
 }
 
@@ -51,7 +51,8 @@ class RecipeFormViewmodel extends ChangeNotifier {
   get isLoadingTags => _isLoadingTags;
   get errorMessage => _errorMessage;
 
-  List<String> getUnits(String tag) => List<String>.unmodifiable(_tagUnitsMap[tag]?.units ?? []); // TODO: maybe null instead of empty
+  List<String> getUnits(String tag) =>
+      List<String>.unmodifiable(_tagUnitsMap[tag]?.units ?? []); // TODO: maybe null instead of empty
 
   Iterable<String> tagSearch(String tag) {
     return _tagsFuse.search(tag).map((e) => e.item);
@@ -109,7 +110,7 @@ class RecipeFormViewmodel extends ChangeNotifier {
       );
       String? msg = e is ArgumentError ? e.message : null;
       msg ??= e is ValidationError ? e.message : null;
-      
+
       return InsertValidationFailure(msg ?? 'Could not validate recipe');
     }
 
@@ -212,36 +213,41 @@ class RecipeFormViewmodel extends ChangeNotifier {
   }
 
   IngredientData _parseLine(String line) {
-    final regex = RegExp(r'^(\d+\/\d+|\d+(?:[\.,]\d+)?(?:\s+\d+\/\s*\d+)?)\s*(.*)$');
+    final regex = RegExp(r'^(\d+/\d+|\d+(?:[.,]\d+)?(?:\s+\d+/\s*\d+)?)\s*(.*)$');
     final match = regex.firstMatch(line);
 
     if (match == null) return IngredientData();
 
-    final amountString  = match.group(1)!;
-    final rest = match.group(2)!;
+    final amountString = match.group(1)!;
+    final rest = match.group(2)!.trim();
 
     final amount = _parseAmount(amountString);
     final parsedAmountString = amount?.toStringAsFixed(2).replaceAll(RegExp(r'\.?0+$'), '');
 
     // TODO: adjust weight(s)?
-    final unitWeight = 0.3;
-    final tagWeight = 1.2;
+    final unitWeight = 0.6;
+    final tagWeight = 1.0;
+    final unitThreshold = 0.2;
+    final tagThreshold = 0.3;
     final noUnitPenalty = 0.7;
 
-    final words = rest.split(' ');
-    final matchedTag = _tagsFuse.search(rest, 1).firstOrNull;
-    String? bestUnit;
+    final matchedTag = _tagsFuse.search(rest, 1).where((e) => e.score < tagThreshold).firstOrNull;
+    final matchedUnit = _unitFuseMap[matchedTag?.item]?.search(rest, 1)
+        .where((e) => e.score < unitThreshold).firstOrNull;
+    String? bestUnit = matchedUnit?.item;
     String? bestTag = matchedTag?.item;
-    double bestScore = (matchedTag?.score ?? 10000.0) * tagWeight + noUnitPenalty * unitWeight;
+    double bestScore = (matchedUnit?.score ?? noUnitPenalty) * unitWeight
+        + (matchedTag?.score ?? double.infinity) * tagWeight;
 
-    for (int i = 1; i <= words.length; i++) {
+    final words = rest.split(' ');
+    for (int i = 1; i < words.length; i++) {
       final tagCandidate = words.sublist(i).join(' ');
       final unitCandidate = words.sublist(0, i).join(' ');
       final matchedTags = _tagsFuse.search(tagCandidate, 5);
 
-      for (final matchedTag in matchedTags) {
+      for (final matchedTag in matchedTags.where((e) => e.score < tagThreshold)) {
         final unitsFuse = _unitFuseMap[matchedTag.item];
-        final matchedUnit = unitsFuse?.search(unitCandidate, 1).firstOrNull;
+        final matchedUnit = unitsFuse?.search(unitCandidate, 1).where((e) => e.score < unitThreshold).firstOrNull;
         final score = (matchedUnit?.score ?? noUnitPenalty) * unitWeight + matchedTag.score * tagWeight;
 
         if (score < bestScore) {
@@ -252,9 +258,6 @@ class RecipeFormViewmodel extends ChangeNotifier {
       }
     }
 
-    bestTag ??= words.sublist(1).join(' ');
-    bestUnit ??= words.sublist(0, 1).join(' ');
-
     return IngredientData(amount: parsedAmountString, tag: bestTag, unit: bestUnit);
   }
 
@@ -262,7 +265,7 @@ class RecipeFormViewmodel extends ChangeNotifier {
     final results = <IngredientData>[];
     for (final line in text.split('\n')) {
       final normalizedLine = normalizeLine(line);
-      if (line.isNotEmpty) {
+      if (line.trim().isNotEmpty) {
         final parsedLine = _parseLine(normalizedLine);
         parsedLine.originalValue = line;
         results.add(parsedLine);

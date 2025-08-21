@@ -185,7 +185,7 @@ class _PlanStep {
   final Recipe? recipe;
   final double score;
 
-  final List<({PantryItem item, double quantity})> usedItems; // TODO growable:false?
+  final List<({PantryItem item, double quantity})> usedItems;
 
   _PlanStep({
     required this.parent,
@@ -196,22 +196,15 @@ class _PlanStep {
 }
 
 // TODO:
-// add Result wrapper like for repos?
+// maybe add Result wrapper like for repos?
 class MealPlanner {
   MealPlanner({required this.config});
 
-  // TODO move this to the config class once everything is working
+  // TODO move this to the config class later
   final MealPlannerConfig config;
-  final int maxRecipePoolSize = 20;
   final int planLength = 14;
-  final int wasteArrayLength = 10;
   final double acceptableError = 0.05;
-  final double epsilon = 0.005;
-  final double frequencyWeight = 0;
-  final double recencyWeight = 0;
-  final double bestScoreSimilarityThreshold = 0.2;
-  final double requirementsLowerMargin = 0.9;
-  final double requirementsUpperMargin = 1.1;
+  final double epsilon = 0.0001; // we're cooking not launching a rocket
 
   MealPlan generatePlan({
     required List<LocalProduct> products,
@@ -220,17 +213,14 @@ class MealPlanner {
     required MealPlanConstraints constraints,
     required MealPlan currentPlan,
   }) {
-    // TODO:
-    // add recipe.last_time_used
-    // deep copy the currentPLan first?
-
     // ##################################################### PREPARE SOME GENERAL VALUES
     final today = DateUtils.dateOnly(DateTime.now());
     currentPlan.clearPastDays(today, planLength);
 
     pantryItems = pantryItems.where((i) => i.isBought).toList();
-    //dev.log("Items: ${pantryItems.map((e) => e.uuid.substring(0, 4))}");
-    // TODO prefilter recipes
+    recipes = recipes.map((e) => e.copyWith()).toList(growable: false);
+    final recipesUsedTemp = Map.fromEntries(recipes.map((e) => MapEntry(e.id!, e.timesUsed)));
+    final recipesLastUsedTemp = Map.fromEntries(recipes.map((e) => MapEntry(e.id!, e.lastTimeUsed)));
 
     // ##################################################### PREPARE AUXILIARY TAG-[PRODUCT] MAP
 
@@ -281,8 +271,6 @@ class MealPlanner {
                   (e) => e.units.containsKey(recipeIngredient.unit)).toList() ?? [];
           final pantryItems = pantry.getItems(recipeIngredient.tag.name)
               ?.where((e) => e.product.units.containsKey(recipeIngredient.unit)) ?? [];
-          //dev.log(pantry.getItems(recipeIngredient.tag.name)?.map((e) => e.uuid.substring(0, 4)).toString() ?? "(-)");
-          //dev.log(pantryItems.map((e) => e.uuid.substring(0, 4)).toString());
 
           // a recipe with missing ingredients can't be used
           if (matchingProducts.isEmpty) continue recipesLoop;
@@ -361,7 +349,6 @@ class MealPlanner {
             }
           }
 
-          // TODO tweak or optimize?
           // add full containers while they fit
           if (remainingQuantityLow > 0) {
             // because containerSize == null products should precede others
@@ -439,13 +426,22 @@ class MealPlanner {
           }
         }
 
-        // TODO tweak penalties
-        final recencyPenalty = 0;
-        final frequencyPenalty = 0;
+        // TODO tweak penalties?
+        const double weightFreq = 1.2;
+        const double weightRec = 50;
+        final timesUsed = recipe.timesUsed + (recipesUsedTemp[recipe.id] ?? 0);
+        final DateTime? lastTimeUsed = recipesLastUsedTemp[recipe.id] ?? recipe.lastTimeUsed;
 
-        final finalScore = totalScore + recencyPenalty + frequencyPenalty;
+        final recencyPenalty = (lastTimeUsed == null)
+            ? 0.0
+            : (planState.date.difference(lastTimeUsed).inDays < 2 ? weightRec : 0.0);
+
+        final over = max(0, timesUsed - 2);
+        final frequencyPenalty = weightFreq * over * over;
+
+        final finalScore = totalScore - recencyPenalty * frequencyPenalty;
+
         pickedItems.addAll(itemsToBuy);
-
         resultList.add(
           _PlanStep(
             parent: planState.lastStep,
@@ -456,20 +452,21 @@ class MealPlanner {
         );
       }
 
+      resultList.sort((a, b) => a.score.compareTo(b.score));
+      dev.log('MAX:${resultList.last.score}\tMIN:${resultList.first.score}');
       return resultList;
     }
 
     // ##################################################### FIND BEST PLAN
 
     var pantry = _PantryState.from(tagPantryItemsMap);
-    //dev.log("Initial pantry:${tagPantryItemsMap.values.expand((l) => l).map((e) => e.uuid.substring(0, 4)).toString()}");
 
     mainLoop:
     for (int i = 0; i < currentPlan.length; i++) {
       final day = currentPlan.plan[i];
       final currentDayDate = today.add(Duration(days: i));
 
-      dev.log("Generating plan for ${currentDayDate.toString().split(" ").firstOrNull}", name: 'MealPlanner');
+      dev.log('Generating plan for ${currentDayDate.toString().split(" ").firstOrNull}', name: 'MealPlanner');
 
       // ############ LOAD RECIPES FROM THE PLAN
       _PlanStep parentStep = _PlanStep(parent: null, recipe: null, usedItems: [], score: 0);
@@ -554,6 +551,11 @@ class MealPlanner {
               assert(item.isBought || product.containerSize == null || quantity <= product.containerSize! + epsilon);
             }
 
+            final used = recipesUsedTemp[step.recipe!.id!];
+            assert(used != null);
+            recipesUsedTemp[step.recipe!.id!] = (used ?? 0) + 1;
+            recipesLastUsedTemp[step.recipe!.id!] = currentDayDate;
+
             // ############ ADD THE DAILY PLAN TO FINAL RESULT
             slots.add(MealPlanSlot(
               recipe: step.recipe!,
@@ -566,7 +568,6 @@ class MealPlanner {
               isValid: true,
             ));
           }
-          //dev.log("Items for day $i: ${slots.map((e) => e.ingredients).expand((l) => l.values).expand((l) => l).map((e) => e.item.uuid.substring(0, 5)).toString()}");
           currentPlan.plan[i] = slots;
           currentPlan.waste[i] = currentState.waste;
 
@@ -578,24 +579,12 @@ class MealPlanner {
 
         // ############ LOAD AND RECREATE THE PlanState
         final newSteps = expandPlan(currentState);
-        planQueue.addAll(newSteps); // TODO sort and take top 50 if too costly? (quickselect would be faster)
-        //dev.log(newSteps.map((step) => "${step.recipe?.name} ${step.score.toString()}").toString());
+        planQueue.addAll(newSteps); // TODO quickselect top 50 to limit max branching factor?
       }
-      // TODO failed to generate a plan for this day
+      // TODO failed to generate a plan for this day, fail loudly?
     }
 
     // ##################################################### RETURN RESULT
-    // TODO remove
-    /*for (final slot in currentPlan.plan[0]) {
-      for (final comps in slot.ingredients.values) {
-        for (final c in comps.where((c) => !c.item.isBought)) {
-          final size = c.item.product.containerSize;
-          final iQty = c.item.quantity;
-          final used = c.quantity;
-          dev.log('GEN to-buy uuid=${c.item.uuid.substring(0,4)} pack=$size itemQty=$iQty used=$used', name: 'Planner');
-        }
-      }
-    }*/
 
     return currentPlan;
   }

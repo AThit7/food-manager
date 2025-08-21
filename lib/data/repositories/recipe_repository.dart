@@ -143,7 +143,6 @@ class RecipeRepository{
       final recipeMap = _recipeToMap(recipe);
       final ingredientsTagsMaps = _recipeToIngredientsTagsMaps(recipe);
 
-      // TODO: can probably be improved
       count = await _db.transaction((txn) async {
         final updatedCount = txn.update(
           RecipeSchema.table,

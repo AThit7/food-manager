@@ -41,7 +41,7 @@ class DaySummaryCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Summary", style: Theme.of(context).textTheme.titleMedium),
+            Text('Summary', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -97,7 +97,6 @@ class _RecipeCardState extends State<RecipeCard> {
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
-          //Text(widget.slot.uuid, style: Theme.of(context).textTheme.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
           Row(
             children: [
               Expanded(
@@ -202,7 +201,6 @@ class _IngredientLine extends StatelessWidget {
               ],
             ),
             const SizedBox(width: 8),
-            //Text(item.uuid, style: Theme.of(context).textTheme.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
           ],
         ),
       ),
@@ -220,7 +218,6 @@ class PlannerScreen extends StatefulWidget {
 }
 
 class _PlannerScreenState extends State<PlannerScreen> {
-  late DateTime selectedDate;
   PageController? _pageController;
 
   String _formatDate(DateTime d) {
@@ -233,13 +230,10 @@ class _PlannerScreenState extends State<PlannerScreen> {
   int _idxFor(DateTime d, MealPlan p) => (d.difference(p.dayZero).inDays).clamp(0, p.length - 1);
   DateTime _dateFor(int i, MealPlan p) => p.dayZero.add(Duration(days: i));
 
-
   @override
   void initState() {
     super.initState();
-    final today = DateTime.now();
-    selectedDate = DateTime(today.year, today.month, today.day);
-    widget.viewModel.loadMealPlan();
+    widget.viewModel.loadMealPlan(true);
   }
 
   @override
@@ -261,12 +255,12 @@ class _PlannerScreenState extends State<PlannerScreen> {
               if (!viewModel.isLoading) viewModel.loadMealPlan(false);
             },
             icon: Icon(Icons.autorenew),
-            tooltip: "Regenerate plan",
+            tooltip: 'Regenerate plan',
           ),
           IconButton(
             onPressed: () => showPlannerPreferencesSheet(context, viewModel),
             icon: Icon(Icons.settings),
-            tooltip: "Preferences",
+            tooltip: 'Preferences',
           ),
         ],
       ),
@@ -275,15 +269,15 @@ class _PlannerScreenState extends State<PlannerScreen> {
         builder: (context, child) {
           final plan = widget.viewModel.mealPlan;
           if (viewModel.isLoading) {
-            return const Center(child: Text("Generating plan..."));
+            return const Center(child: Text('Please wait...'));
           } else if (viewModel.errorMessage != null) {
             return Center(child: Text(viewModel.errorMessage!));
           } else if (plan != null) {
-            _pageController ??= PageController(initialPage: _idxFor(selectedDate, plan));
+            _pageController ??= PageController(initialPage: _idxFor(viewModel.selectedDate, plan));
 
             return PageView.builder(
               controller: _pageController,
-              onPageChanged: (i) => setState(() => selectedDate = _dateFor(i, plan)),
+              onPageChanged: (i) => setState(() => viewModel.selectedDate = _dateFor(i, plan)),
               itemCount: plan.length,
               itemBuilder: (context, i) {
                 final date = _dateFor(i, plan);
@@ -309,7 +303,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
                           ),
                           IconButton(
                             icon: const Icon(Icons.keyboard_double_arrow_right_rounded),
-                            onPressed: i >= plan.length - 1 ? null : () => _pageController!.jumpToPage(plan.length),
+                            onPressed: i >= plan.length - 1 ? null : () => _pageController!.jumpToPage(plan.length - 1),
                           ),
                         ],
                       ),
@@ -344,8 +338,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
               },
             );
           } else {
-            assert(false);
-            return Center(child: Text("Unexpected error"));
+            return Center(child: Text('Unexpected error'));
           }
         },
       ),
