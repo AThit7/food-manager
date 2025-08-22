@@ -1,5 +1,5 @@
 import 'package:flutter/cupertino.dart';
-import 'package:food_manager/core/result/repo_result.dart';
+import 'package:food_manager/core/result/result.dart';
 import 'package:food_manager/data/repositories/recipe_repository.dart';
 import 'package:food_manager/domain/models/recipe.dart';
 
@@ -33,9 +33,9 @@ class RecipeViewmodel extends ChangeNotifier {
     final result = await _recipeRepository.deleteRecipe(recipe.id!);
 
     switch(result) {
-      case RepoSuccess(): break;
-      case RepoError(): errorMessage = result.message;
-      case RepoFailure(): errorMessage = "Couldn't delete recipe.";
+      case ResultSuccess(): break;
+      case ResultError(): errorMessage = result.message;
+      case ResultFailure(): errorMessage = "Couldn't delete recipe.";
     }
 
     isLoading = false;

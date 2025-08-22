@@ -3,7 +3,7 @@ import 'dart:developer';
 
 import 'package:flutter/cupertino.dart';
 import 'package:food_manager/core/exceptions/exceptions.dart';
-import 'package:food_manager/core/result/repo_result.dart';
+import 'package:food_manager/core/result/result.dart';
 import 'package:food_manager/data/repositories/tag_repository.dart';
 import 'package:food_manager/domain/models/recipe_ingredient.dart';
 import 'package:food_manager/domain/models/tag.dart';
@@ -117,21 +117,21 @@ class RecipeFormViewmodel extends ChangeNotifier {
     if (recipe.id == null) {
       final result = await _recipeRepository.insertRecipe(recipe);
       switch (result) {
-        case RepoSuccess():
+        case ResultSuccess():
           return InsertSuccess(recipe.copyWith(id: result.data));
-        case RepoFailure():
+        case ResultFailure():
           return InsertRepoFailure();
-        case RepoError():
+        case ResultError():
           return InsertRepoFailure();
       }
     } else {
       final result = await _recipeRepository.updateRecipe(recipe);
       switch (result) {
-        case RepoSuccess():
+        case ResultSuccess():
           return InsertSuccess(recipe);
-        case RepoFailure():
+        case ResultFailure():
           return InsertRepoFailure();
-        case RepoError():
+        case ResultError():
           return InsertRepoFailure();
       }
     }
@@ -145,12 +145,12 @@ class RecipeFormViewmodel extends ChangeNotifier {
     notifyListeners();
 
     switch (result) {
-      case RepoSuccess():
+      case ResultSuccess():
         _tagUnitsMap = Map<String, ({int id, List<String> units})>.fromEntries(
             result.data.map((e) => MapEntry(e.tag.name, (id: e.tag.id!, units: List.of(e.units)))));
-      case RepoError():
+      case ResultError():
         _errorMessage = result.message;
-      case RepoFailure():
+      case ResultFailure():
         throw StateError('Unexpected RepoFailure in loadTagsAndUnits');
     }
 

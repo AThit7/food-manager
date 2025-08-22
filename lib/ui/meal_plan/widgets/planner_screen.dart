@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:food_manager/domain/models/meal_planner/meal_plan.dart';
+import 'package:food_manager/domain/models/meal_plan.dart';
 import 'package:food_manager/domain/models/pantry_item.dart';
 import 'package:food_manager/ui/meal_plan/view_models/planner_viewmodel.dart';
 import 'package:food_manager/ui/meal_plan/widgets/planner_preferences_sheet.dart';

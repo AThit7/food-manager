@@ -2,11 +2,11 @@ import 'dart:math';
 import 'dart:developer' as dev;
 
 import 'package:flutter/material.dart';
-import 'package:food_manager/domain/models/meal_planner/meal_plan.dart';
-import 'package:food_manager/domain/models/meal_planner/meal_plan_constraints.dart';
-import 'package:food_manager/domain/models/meal_planner/meal_planner_config.dart';
+import 'package:food_manager/domain/models/meal_plan.dart';
+import 'package:food_manager/application/models/meal_plan_constraints.dart';
+import 'package:food_manager/application/config/meal_planner_config.dart';
 import 'package:food_manager/domain/models/pantry_item.dart';
-import 'package:food_manager/domain/models/product/local_product.dart';
+import 'package:food_manager/domain/models/local_product.dart';
 import 'package:food_manager/domain/models/recipe.dart';
 import 'package:collection/collection.dart';
 

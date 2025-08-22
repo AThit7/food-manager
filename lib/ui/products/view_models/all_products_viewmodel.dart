@@ -2,10 +2,10 @@ import 'dart:async';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
-import 'package:food_manager/core/result/repo_result.dart';
+import 'package:food_manager/core/result/result.dart';
 
 import '../../../data/repositories/local_product_repository.dart';
-import '../../../domain/models/product/local_product.dart';
+import '../../../domain/models/local_product.dart';
 
 class AllProductsViewmodel extends ChangeNotifier {
   AllProductsViewmodel ({
@@ -48,9 +48,9 @@ class AllProductsViewmodel extends ChangeNotifier {
     _products = [];
 
     switch (result) {
-      case RepoSuccess(): _products = result.data;
-      case RepoError(): errorMessage = result.message;
-      case RepoFailure():
+      case ResultSuccess(): _products = result.data;
+      case ResultError(): errorMessage = result.message;
+      case ResultFailure():
         throw StateError('Unexpected RepoFailure in loadProducts');
     }
 

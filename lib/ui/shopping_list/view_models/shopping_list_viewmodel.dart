@@ -1,11 +1,11 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:food_manager/core/result/repo_result.dart';
+import 'package:food_manager/core/result/result.dart';
 import 'package:food_manager/data/repositories/meal_plan_repository.dart';
 import 'package:food_manager/data/repositories/pantry_item_repository.dart';
-import 'package:food_manager/domain/models/meal_planner/meal_plan.dart';
-import 'package:food_manager/domain/models/shopping_list_entry.dart';
-import 'package:food_manager/domain/services/shopping_list_generator.dart';
+import 'package:food_manager/domain/models/meal_plan.dart';
+import 'package:food_manager/application/models/shopping_list_entry.dart';
+import 'package:food_manager/application/shopping_list_generator.dart';
 import 'package:food_manager/domain/validators/pantry_item_validator.dart';
 
 class ShoppingListViewmodel extends ChangeNotifier {
@@ -50,11 +50,11 @@ class ShoppingListViewmodel extends ChangeNotifier {
   Future<void> _fetchMealPlan() async {
     final planResult = await _mealPlanRepository.getLatestPlan();
     switch (planResult) {
-      case RepoSuccess(data: final plan):
+      case ResultSuccess(data: final plan):
         mealPlan = plan;
-      case RepoError(message: final msg):
+      case ResultError(message: final msg):
         errorMessage = msg;
-      case RepoFailure():
+      case ResultFailure():
     }
   }
 
@@ -90,11 +90,11 @@ class ShoppingListViewmodel extends ChangeNotifier {
 
     final updateResult = await _itemRepository.buyItems(items);
     switch (updateResult) {
-      case RepoSuccess(): break;
-      case RepoError(): {
+      case ResultSuccess(): break;
+      case ResultError(): {
         return "Error: failed to buy the items";
       }
-      case RepoFailure():
+      case ResultFailure():
         return "Unexpected: not all items were bought correctly.";
     }
 

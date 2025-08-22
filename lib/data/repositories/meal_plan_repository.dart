@@ -3,13 +3,13 @@ import 'dart:convert';
 import 'dart:developer';
 
 import 'package:collection/collection.dart';
-import 'package:food_manager/core/result/repo_result.dart';
+import 'package:food_manager/core/result/result.dart';
 import 'package:food_manager/data/database/schema/meal_plan_schema.dart';
 import 'package:food_manager/data/database/schema/pantry_item_schema.dart';
 import 'package:food_manager/data/repositories/pantry_item_repository.dart';
 import 'package:food_manager/data/repositories/recipe_repository.dart';
 import 'package:food_manager/data/services/database/database_service.dart';
-import 'package:food_manager/domain/models/meal_planner/meal_plan.dart';
+import 'package:food_manager/domain/models/meal_plan.dart';
 import 'package:food_manager/domain/models/pantry_item.dart';
 import 'package:food_manager/domain/models/recipe.dart';
 import 'package:food_manager/domain/validators/pantry_item_validator.dart';
@@ -97,11 +97,11 @@ class MealPlanRepository {
     final daysValid = <bool>[];
 
     final itemsResult = await _pantryItemRepository.listPantryItems();
-    if (itemsResult is! RepoSuccess<List<PantryItem>>) {
+    if (itemsResult is! ResultSuccess<List<PantryItem>>) {
       throw StateError("Failed to fetch items.");
     }
     final recipeResult = await _recipeRepository.listRecipes();
-    if (recipeResult is! RepoSuccess<List<Recipe>>) {
+    if (recipeResult is! ResultSuccess<List<Recipe>>) {
       throw StateError("Failed to fetch recipes.");
     }
 
@@ -207,7 +207,7 @@ class MealPlanRepository {
     }
   }
 
-  Future<RepoResult<List<MealPlan>>> listPlans() async {
+  Future<Result<List<MealPlan>>> listPlans() async {
     try {
       final rows = await _db.query(MealPlanSchema.table, orderBy: '${MealPlanSchema.updatedAt} DESC');
 
@@ -217,7 +217,7 @@ class MealPlanRepository {
         if (plan != null) plans.add(plan);
       }
 
-      return RepoSuccess(plans);
+      return ResultSuccess(plans);
     } catch (e, s) {
       log(
         "Unexpected error when fetching plans.",
@@ -226,23 +226,23 @@ class MealPlanRepository {
         stackTrace: s,
         level: 1200,
       );
-      return RepoError("Unexpected error when fetching plans.", e);
+      return ResultError("Unexpected error when fetching plans.", e);
     }
   }
 
-  Future<RepoResult<MealPlan?>> getLatestPlan() async {
+  Future<Result<MealPlan?>> getLatestPlan() async {
     final result = await listPlans();
-    if (result is RepoSuccess<List<MealPlan>>) {
-      return RepoSuccess(result.data.isEmpty ? null : result.data.first);
-    } else if (result is RepoError<List<MealPlan>>) {
-      return RepoError(result.message, result.exception);
-    } else if (result is RepoFailure<List<MealPlan>>) {
-      return RepoFailure(result.message);
+    if (result is ResultSuccess<List<MealPlan>>) {
+      return ResultSuccess(result.data.isEmpty ? null : result.data.first);
+    } else if (result is ResultError<List<MealPlan>>) {
+      return ResultError(result.message, result.exception);
+    } else if (result is ResultFailure<List<MealPlan>>) {
+      return ResultFailure(result.message);
     }
     throw StateError("Could not match the listPlan()'s type.");
   }
 
-  Future<RepoResult<void>> savePlan(MealPlan plan) async {
+  Future<Result<void>> savePlan(MealPlan plan) async {
     final items = <PantryItem>{};
     for (final day in plan.plan) {
       for (final slot in day) {
@@ -292,7 +292,7 @@ class MealPlanRepository {
       });
 
       _mealPlanUpdates.add(MealPlanSaved(plan));
-      return RepoSuccess(null);
+      return ResultSuccess(null);
     } catch (e, s) {
       log(
         "Unexpected error when saving plan.",
@@ -301,11 +301,11 @@ class MealPlanRepository {
         stackTrace: s,
         level: 1200,
       );
-      return RepoError("Unexpected error when saving plan.", e);
+      return ResultError("Unexpected error when saving plan.", e);
     }
   }
 
-  Future<RepoResult<void>> consumeAndSave({
+  Future<Result<void>> consumeAndSave({
     required MealPlan plan,
     required List<({String itemUuid, double quantity})> newItemQuantities,
   }) async {
@@ -344,7 +344,7 @@ class MealPlanRepository {
       await batch.commit(noResult: true);
 
       _mealPlanUpdates.add(MealPlanSaved(plan));
-      return RepoSuccess(null);
+      return ResultSuccess(null);
     } catch (e, s) {
       log(
         "consumeAndSave failed",
@@ -353,11 +353,11 @@ class MealPlanRepository {
         stackTrace: s,
         level: 1200,
       );
-      return RepoError("Unexpected error when saving and consuming", e);
+      return ResultError("Unexpected error when saving and consuming", e);
     }
   }
 
-  Future<RepoResult<void>> clearPlans() async {
+  Future<Result<void>> clearPlans() async {
     try {
       final batch = _db.batch();
       batch.delete(MealPlanSchema.table);
@@ -365,7 +365,7 @@ class MealPlanRepository {
       await batch.commit(noResult: true);
 
       _mealPlanUpdates.add(MealPlanCleared());
-      return RepoSuccess(null);
+      return ResultSuccess(null);
     } catch (e, s) {
       log(
         "Unexpected error when clearing plans.",
@@ -374,7 +374,7 @@ class MealPlanRepository {
         stackTrace: s,
         level: 1200,
       );
-      return RepoError("Unexpected error when clearing plans.", e);
+      return ResultError("Unexpected error when clearing plans.", e);
     }
   }
 }

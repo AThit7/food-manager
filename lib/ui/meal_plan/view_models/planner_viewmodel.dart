@@ -1,18 +1,18 @@
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
-import 'package:food_manager/core/result/repo_result.dart';
+import 'package:food_manager/core/result/result.dart';
 import 'package:food_manager/data/repositories/local_product_repository.dart';
 import 'package:food_manager/data/repositories/meal_plan_repository.dart';
 import 'package:food_manager/data/repositories/pantry_item_repository.dart';
 import 'package:food_manager/data/repositories/recipe_repository.dart';
 import 'package:food_manager/data/services/shared_preferences_service.dart';
-import 'package:food_manager/domain/models/meal_planner/meal_plan.dart';
-import 'package:food_manager/domain/models/meal_planner/meal_plan_constraints.dart';
+import 'package:food_manager/domain/models/meal_plan.dart';
+import 'package:food_manager/application/models/meal_plan_constraints.dart';
 import 'package:food_manager/domain/models/pantry_item.dart';
-import 'package:food_manager/domain/models/product/local_product.dart';
+import 'package:food_manager/domain/models/local_product.dart';
 import 'package:food_manager/domain/models/recipe.dart';
-import 'package:food_manager/domain/services/meal_planner.dart';
+import 'package:food_manager/application/meal_planner.dart';
 
 class PlannerViewmodel extends ChangeNotifier {
   PlannerViewmodel({
@@ -99,18 +99,18 @@ class PlannerViewmodel extends ChangeNotifier {
   Future<void> _loadMealPlanFromDb() async {
     final planResult = await _mealPlanRepository.getLatestPlan();
     switch (planResult) {
-      case RepoSuccess():
+      case ResultSuccess():
         mealPlan = planResult.data;
-      case RepoError():
+      case ResultError():
         errorMessage = planResult.message;
-      case RepoFailure():
+      case ResultFailure():
     }
   }
   
   Future<void> _saveMealPlan() async {
     if (mealPlan == null) return;
     final planResult = await _mealPlanRepository.savePlan(mealPlan!);
-    assert(planResult is RepoSuccess, 'Unexpected: saving meal plan failed.');
+    assert(planResult is ResultSuccess, 'Unexpected: saving meal plan failed.');
   }
   
   Future<void> loadMealPlan([bool tryDatabase = true]) async {
@@ -137,21 +137,21 @@ class PlannerViewmodel extends ChangeNotifier {
     List<Recipe>? recipes;
 
     switch (productsResult) {
-      case RepoSuccess(): products = productsResult.data;
-      case RepoError(): errorMessage = productsResult.message;
-      case RepoFailure(): throw StateError('Unexpected RepoFailure in loadMealPlan');
+      case ResultSuccess(): products = productsResult.data;
+      case ResultError(): errorMessage = productsResult.message;
+      case ResultFailure(): throw StateError('Unexpected RepoFailure in loadMealPlan');
     }
 
     switch (pantryItemsResult) {
-      case RepoSuccess(): pantryItems = pantryItemsResult.data;
-      case RepoError(): errorMessage = pantryItemsResult.message;
-      case RepoFailure(): throw StateError('Unexpected RepoFailure in loadMealPlan');
+      case ResultSuccess(): pantryItems = pantryItemsResult.data;
+      case ResultError(): errorMessage = pantryItemsResult.message;
+      case ResultFailure(): throw StateError('Unexpected RepoFailure in loadMealPlan');
     }
 
     switch (recipesResult) {
-      case RepoSuccess(): recipes = recipesResult.data;
-      case RepoError(): errorMessage = recipesResult.message;
-      case RepoFailure(): throw StateError('Unexpected RepoFailure in loadMealPlan');
+      case ResultSuccess(): recipes = recipesResult.data;
+      case ResultError(): errorMessage = recipesResult.message;
+      case ResultFailure(): throw StateError('Unexpected RepoFailure in loadMealPlan');
     }
 
     if (products == null || pantryItems == null || recipes == null) {
@@ -194,11 +194,11 @@ class PlannerViewmodel extends ChangeNotifier {
     Map<String, PantryItem>? pantryItems;
 
     switch (pantryItemsResult) {
-    case RepoSuccess(): pantryItems = Map.fromEntries(pantryItemsResult.data.map((e) => MapEntry(e.uuid, e)));
-    case RepoError():
+    case ResultSuccess(): pantryItems = Map.fromEntries(pantryItemsResult.data.map((e) => MapEntry(e.uuid, e)));
+    case ResultError():
       errorMessage = pantryItemsResult.message;
       return;
-    case RepoFailure(): throw StateError('Unexpected RepoFailure in loadMealPlan');
+    case ResultFailure(): throw StateError('Unexpected RepoFailure in loadMealPlan');
     }
 
     for (final comp in slot.ingredients.values.expand((list) => list)) {
@@ -219,14 +219,14 @@ class PlannerViewmodel extends ChangeNotifier {
     slot.eat();
 
     final planResult = await _mealPlanRepository.savePlan(mealPlan!);
-    if (planResult is RepoError) errorMessage = planResult.message;
+    if (planResult is ResultError) errorMessage = planResult.message;
 
     final modifiedRecipe = slot.recipe.copyWith(
       lastTimeUsed: DateUtils.dateOnly(DateTime.now()),
       timesUsed: slot.recipe.timesUsed + 1,
     );
     final recipeResult = await _recipeRepository.updateRecipe(modifiedRecipe);
-    if (recipeResult is RepoError) errorMessage = recipeResult.message;
+    if (recipeResult is ResultError) errorMessage = recipeResult.message;
 
     isLoading = false;
     notifyListeners();

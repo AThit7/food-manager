@@ -6,8 +6,8 @@ import 'package:food_manager/data/repositories/tag_repository.dart';
 import 'package:food_manager/domain/models/tag.dart';
 import 'package:food_manager/domain/validators/local_product_validator.dart';
 
-import '../../core/result/repo_result.dart';
-import '../../domain/models/product/local_product.dart';
+import '../../core/result/result.dart';
+import '../../domain/models/local_product.dart';
 import '../../data/services/database/database_service.dart';
 import '../../data/database/schema/product_schema.dart';
 import '../../data/database/schema/unit_schema.dart';
@@ -94,7 +94,7 @@ class LocalProductRepository{
     );
   }
 
-  Future<RepoResult<int>> insertProduct(LocalProduct product) async {
+  Future<Result<int>> insertProduct(LocalProduct product) async {
     if (!ProductValidator.isValid(product)) {
       throw ArgumentError('Product has invalid fields.');
     }
@@ -117,7 +117,7 @@ class LocalProductRepository{
       });
 
       _productUpdates.add(ProductAdded(product.copyWith(id: productId)));
-      return RepoSuccess(productId);
+      return ResultSuccess(productId);
     } catch (e, s) {
       log(
         'Unexpected error when inserting product.',
@@ -126,11 +126,11 @@ class LocalProductRepository{
         stackTrace: s,
         level: 1200,
       );
-      return RepoError('Unexpected error when inserting product.', e);
+      return ResultError('Unexpected error when inserting product.', e);
     }
   }
 
-  Future<RepoResult<void>> updateProduct(LocalProduct product) async {
+  Future<Result<void>> updateProduct(LocalProduct product) async {
     if (product.id == null) {
       throw ArgumentError('Product must have an ID when updating.');
     }
@@ -172,15 +172,15 @@ class LocalProductRepository{
         stackTrace: s,
         level: 1200,
       );
-      return RepoError('Unexpected error when updating product.', e);
+      return ResultError('Unexpected error when updating product.', e);
     }
 
     if (count == 0) {
-      return RepoFailure("No product found with id ${product.id}.");
+      return ResultFailure("No product found with id ${product.id}.");
     }
     if (count == 1) {
       _productUpdates.add(ProductModified(product));
-      return RepoSuccess(null);
+      return ResultSuccess(null);
     }
 
     throw StateError(
@@ -189,7 +189,7 @@ class LocalProductRepository{
     );
   }
 
-  Future<RepoResult<void>> deleteProduct(int productId) async {
+  Future<Result<void>> deleteProduct(int productId) async {
     int count;
     try {
       count = await _db.delete(
@@ -205,20 +205,20 @@ class LocalProductRepository{
         stackTrace: s,
         level: 1200,
       );
-      return RepoError('Unexpected error when deleting product.', e);
+      return ResultError('Unexpected error when deleting product.', e);
     }
 
-    if (count == 0) return RepoFailure("No product found with id $productId.");
+    if (count == 0) return ResultFailure("No product found with id $productId.");
     if (count == 1) {
       _productUpdates.add(ProductDeleted(productId));
-      return RepoSuccess(null);
+      return ResultSuccess(null);
     }
 
     throw StateError('Unexpected delete count: $count for id $productId. Expected 0 or 1. Data may be corrupted.',
     );
   }
 
-  Future<RepoResult<List<LocalProduct>>> listProducts() async {
+  Future<Result<List<LocalProduct>>> listProducts() async {
     const String productTable = 'product_table';
     const String unitTable = 'unit_table';
     const String tagTable = 'tag_table';
@@ -257,7 +257,7 @@ class LocalProductRepository{
         }
       }
 
-      return RepoSuccess(productsMap.values.toList());
+      return ResultSuccess(productsMap.values.toList());
     } catch (e, s) {
       log(
         'Unexpected error when fetching all products.',
@@ -266,12 +266,12 @@ class LocalProductRepository{
         stackTrace: s,
         level: 1200,
       );
-      return RepoError('Unexpected error when fetching all products: $e');
+      return ResultError('Unexpected error when fetching all products: $e');
     }
   }
 
   // TODO units and tag
-  Future<RepoResult<LocalProduct?>> getProduct(int id) async {
+  Future<Result<LocalProduct?>> getProduct(int id) async {
     try {
       final List<Map<String, Object?>> productMaps = await _db.query(
         ProductSchema.table,
@@ -280,9 +280,9 @@ class LocalProductRepository{
       );
 
       if (productMaps.isEmpty) {
-        return RepoFailure('No product with id $id.');
+        return ResultFailure('No product with id $id.');
       }
-      return RepoSuccess(_localProductFromMap(productMaps.first, Tag(name: "TODO")));
+      return ResultSuccess(_localProductFromMap(productMaps.first, Tag(name: "TODO")));
     } catch (e, s) {
       log(
         'Unexpected error when fetching product with id $id.',
@@ -291,12 +291,12 @@ class LocalProductRepository{
         stackTrace: s,
         level: 1200,
       );
-      return RepoError(
+      return ResultError(
           'Unexpected error when fetching product with id $id: $e');
     }
   }
 
-  Future<RepoResult<Map<String, double>>> getProductUnits(int id) async {
+  Future<Result<Map<String, double>>> getProductUnits(int id) async {
     try {
       final List<Map<String, Object?>> rows = await _db.query(
         UnitSchema.table,
@@ -311,7 +311,7 @@ class LocalProductRepository{
         result[name] = value;
       }
 
-      return RepoSuccess(result);
+      return ResultSuccess(result);
     } catch (e, s) {
       log(
         'Unexpected error when fetching product units.',
@@ -320,12 +320,12 @@ class LocalProductRepository{
         stackTrace: s,
         level: 1200,
       );
-      return RepoError('Unexpected error when fetching product units: $e');
+      return ResultError('Unexpected error when fetching product units: $e');
     }
   }
 
   // TODO units and tag
-  Future<RepoResult<LocalProduct?>> getProductByBarcode(String barcode) async {
+  Future<Result<LocalProduct?>> getProductByBarcode(String barcode) async {
     try {
       final product = await _db.transaction((txn) async {
         final List<Map<String, Object?>> productMaps = await txn.query(
@@ -360,9 +360,9 @@ class LocalProductRepository{
       });
 
       if (product == null) {
-        return RepoFailure('No product with barcode $barcode.');
+        return ResultFailure('No product with barcode $barcode.');
       }
-      return RepoSuccess(product);
+      return ResultSuccess(product);
     } catch (e, s) {
       log(
         'Unexpected error when fetching product by barcode ($barcode).',
@@ -371,7 +371,7 @@ class LocalProductRepository{
         stackTrace: s,
         level: 1200,
       );
-      return RepoError('Unexpected error when fetching product by barcode: $e');
+      return ResultError('Unexpected error when fetching product by barcode: $e');
     }
   }
 }

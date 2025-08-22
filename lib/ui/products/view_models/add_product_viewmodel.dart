@@ -1,9 +1,8 @@
-import 'dart:developer';
 import 'package:flutter/cupertino.dart';
-import 'package:food_manager/core/result/repo_result.dart';
+import 'package:food_manager/core/result/result.dart';
 import 'package:food_manager/data/repositories/external_product_repository.dart';
 import 'package:food_manager/data/repositories/local_product_repository.dart';
-import 'package:food_manager/domain/models/product/local_product.dart';
+import 'package:food_manager/domain/models/local_product.dart';
 import 'package:food_manager/ui/products/models/product_form_model.dart';
 
 class AddProductViewmodel extends ChangeNotifier {
@@ -28,43 +27,32 @@ class AddProductViewmodel extends ChangeNotifier {
     product = null;
     form = null;
     errorMessage = null;
-    log('Loading product data for barcode $barcode');
+
     if (barcode == null) {
       form = ProductFormModel();
       isLoaded = true;
       notifyListeners();
       return;
     }
-    log('Querying local database');
-    final localResult = await _localProductRepository.getProductByBarcode(
-        barcode!);
+
+    final localResult = await _localProductRepository.getProductByBarcode(barcode!);
     switch (localResult) {
-      case RepoSuccess(): {
+      case ResultError(): errorMessage = localResult.toString();
+      case ResultSuccess(): {
         product = localResult.data;
         form = ProductFormModel.fromLocalProduct(product!);
       }
-      case RepoError(): {
-        errorMessage = localResult.toString();
-      }
-      case RepoFailure(): {
-        log('Querying remote API');
-        final remoteResult = await _externalProductRepository.getProduct(
-            barcode!);
+      case ResultFailure(): {
+        final remoteResult = await _externalProductRepository.fetchProduct(barcode!);
         switch (remoteResult) {
-          case RepoSuccess(): {
-            form = ProductFormModel.fromExternalProduct(remoteResult.data);
-          }
-          case RepoFailure(): {
-            form = ProductFormModel(barcode: barcode);
-          }
-          case RepoError(): {
-            errorMessage = remoteResult.toString();
-          }
+          case ResultSuccess(): form = ProductFormModel.fromExternalProduct(remoteResult.data);
+          case ResultFailure(): form = ProductFormModel(barcode: barcode);
+          case ResultError(): errorMessage = remoteResult.toString();
         }
       }
     }
+
     isLoaded = true;
-    log('Loading done.');
     notifyListeners();
   }
 }

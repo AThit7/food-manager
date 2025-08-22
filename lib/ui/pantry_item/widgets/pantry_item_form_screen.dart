@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:food_manager/domain/models/product/local_product.dart';
+import 'package:food_manager/domain/models/local_product.dart';
 import 'package:food_manager/ui/products/view_models/product_viewmodel.dart';
 import 'package:food_manager/ui/products/widgets/product_screen.dart';
 import 'package:provider/provider.dart';

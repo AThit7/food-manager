@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
-import 'package:food_manager/core/result/repo_result.dart';
+import 'package:food_manager/core/result/result.dart';
 import 'package:food_manager/data/repositories/local_product_repository.dart';
-import 'package:food_manager/domain/models/product/local_product.dart';
+import 'package:food_manager/domain/models/local_product.dart';
 
 class ProductViewmodel extends ChangeNotifier {
   ProductViewmodel({
@@ -33,9 +33,9 @@ class ProductViewmodel extends ChangeNotifier {
     final result = await _localProductRepository.deleteProduct(product.id!);
 
     switch(result) {
-      case RepoSuccess(): break;
-      case RepoError(): errorMessage = result.message;
-      case RepoFailure(): errorMessage = "Couldn't delete item.";
+      case ResultSuccess(): break;
+      case ResultError(): errorMessage = result.message;
+      case ResultFailure(): errorMessage = "Couldn't delete item.";
     }
 
     isLoading = false;

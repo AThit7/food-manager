@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
-import 'package:food_manager/core/result/repo_result.dart';
+import 'package:food_manager/core/result/result.dart';
 import 'package:food_manager/data/repositories/recipe_repository.dart';
 import 'package:food_manager/domain/models/recipe.dart';
 
@@ -45,9 +45,9 @@ class AllRecipesViewmodel extends ChangeNotifier {
     _recipes = [];
 
     switch (result) {
-      case RepoSuccess(): _recipes = result.data.sorted((a, b) => a.name.compareTo(b.name));
-      case RepoError(): errorMessage = result.message;
-      case RepoFailure():
+      case ResultSuccess(): _recipes = result.data.sorted((a, b) => a.name.compareTo(b.name));
+      case ResultError(): errorMessage = result.message;
+      case ResultFailure():
         throw StateError('Unexpected RepoFailure in loadRecipes');
     }
 

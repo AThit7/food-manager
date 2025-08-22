@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
-import 'package:food_manager/core/result/repo_result.dart';
-import 'package:food_manager/domain/models/product/local_product.dart';
+import 'package:food_manager/core/result/result.dart';
+import 'package:food_manager/domain/models/local_product.dart';
 
 import '../../../data/repositories/pantry_item_repository.dart';
 import '../../../domain/models/pantry_item.dart';
@@ -60,21 +60,21 @@ class PantryItemFormViewmodel {
     if (pantryItem.id == null) {
       final result = await _pantryItemRepository.insertItem(pantryItem);
       switch (result) {
-        case RepoSuccess():
+        case ResultSuccess():
           return InsertSuccess(pantryItem.copyWith(id: result.data));
-        case RepoFailure():
+        case ResultFailure():
           return InsertRepoFailure();
-        case RepoError():
+        case ResultError():
           return InsertRepoFailure();
       }
     } else {
       final result = await _pantryItemRepository.updateItem(pantryItem);
       switch (result) {
-        case RepoSuccess():
+        case ResultSuccess():
           return InsertSuccess(pantryItem);
-        case RepoFailure():
+        case ResultFailure():
           return InsertRepoFailure();
-        case RepoError():
+        case ResultError():
           return InsertRepoFailure();
       }
     }

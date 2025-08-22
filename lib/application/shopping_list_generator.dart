@@ -1,7 +1,7 @@
 import 'dart:developer';
 
-import 'package:food_manager/domain/models/meal_planner/meal_plan.dart';
-import 'package:food_manager/domain/models/shopping_list_entry.dart';
+import 'package:food_manager/domain/models/meal_plan.dart';
+import 'package:food_manager/application/models/shopping_list_entry.dart';
 
 class ShoppingListGenerator {
   List<ShoppingListEntry> generateList({

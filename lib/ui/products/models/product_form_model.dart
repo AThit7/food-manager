@@ -1,5 +1,5 @@
-import '../../../domain/models/product/external_product.dart';
-import '../../../domain/models/product/local_product.dart';
+import '../../../data/models/external_product.dart';
+import '../../../domain/models/local_product.dart';
 
 class ProductFormModel {
   int? id;

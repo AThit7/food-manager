@@ -1,4 +1,4 @@
-import 'package:food_manager/domain/models/product/local_product.dart';
+import 'package:food_manager/domain/models/local_product.dart';
 import 'package:food_manager/domain/validators/tag_validator.dart';
 import '../../core/exceptions/exceptions.dart';
 

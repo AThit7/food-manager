@@ -24,7 +24,6 @@ class SharedPreferencesService {
 
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
-    _safe.clear();
   }
 
   String get scannerType => _safe.getString(_scannerType) ?? _defaultScannerType;

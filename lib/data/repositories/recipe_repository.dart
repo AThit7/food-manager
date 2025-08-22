@@ -8,7 +8,7 @@ import 'package:food_manager/domain/models/recipe_ingredient.dart';
 import 'package:food_manager/domain/models/tag.dart';
 import 'package:food_manager/domain/validators/recipe_validator.dart';
 
-import '../../core/result/repo_result.dart';
+import '../../core/result/result.dart';
 import '../../domain/models/recipe.dart';
 import '../../data/database/schema/recipe_schema.dart';
 import '../../data/services/database/database_service.dart';
@@ -92,7 +92,7 @@ class RecipeRepository{
     );
   }
 
-  Future<RepoResult<int>> insertRecipe(Recipe recipe) async {
+  Future<Result<int>> insertRecipe(Recipe recipe) async {
     if (!RecipeValidator.isValid(recipe)) {
       throw ArgumentError('Recipe has invalid fields.');
     }
@@ -117,7 +117,7 @@ class RecipeRepository{
       });
 
       _recipeUpdates.add(RecipeAdded(recipe.copyWith(id: recipeId)));
-      return RepoSuccess(recipeId);
+      return ResultSuccess(recipeId);
     } catch (e, s) {
       log(
         'Unexpected error when inserting recipe.',
@@ -126,11 +126,11 @@ class RecipeRepository{
         stackTrace: s,
         level: 1200,
       );
-      return RepoError('Unexpected error when inserting recipe.', e);
+      return ResultError('Unexpected error when inserting recipe.', e);
     }
   }
 
-  Future<RepoResult<void>> updateRecipe(Recipe recipe) async {
+  Future<Result<void>> updateRecipe(Recipe recipe) async {
     if (recipe.id == null) {
       throw ArgumentError('Recipe must have an ID when updating.');
     }
@@ -175,15 +175,15 @@ class RecipeRepository{
         stackTrace: s,
         level: 1200,
       );
-      return RepoError('Unexpected error when updating recipe.', e);
+      return ResultError('Unexpected error when updating recipe.', e);
     }
 
     if (count == 0) {
-      return RepoFailure("No recipe found with id ${recipe.id}.");
+      return ResultFailure("No recipe found with id ${recipe.id}.");
     }
     if (count == 1) {
       _recipeUpdates.add(RecipeModified(recipe));
-      return RepoSuccess(null);
+      return ResultSuccess(null);
     }
 
     throw StateError(
@@ -191,7 +191,7 @@ class RecipeRepository{
     );
   }
 
-  Future<RepoResult<void>> deleteRecipe(int recipeId) async {
+  Future<Result<void>> deleteRecipe(int recipeId) async {
     int count;
     try {
       count = await _db.delete(
@@ -207,13 +207,13 @@ class RecipeRepository{
         stackTrace: s,
         level: 1200,
       );
-      return RepoError('Unexpected error when deleting recipe.', e);
+      return ResultError('Unexpected error when deleting recipe.', e);
     }
 
-    if (count == 0) return RepoFailure('No recipe found with id $recipeId.');
+    if (count == 0) return ResultFailure('No recipe found with id $recipeId.');
     if (count == 1) {
       _recipeUpdates.add(RecipeDeleted(recipeId));
-      return RepoSuccess(null);
+      return ResultSuccess(null);
     }
 
     throw StateError(
@@ -222,7 +222,7 @@ class RecipeRepository{
     );
   }
 
-  Future<RepoResult<List<Recipe>>> listRecipes() async {
+  Future<Result<List<Recipe>>> listRecipes() async {
     const String unitColumn = 'unit_column';
     const String amountColumn = 'amount_column';
     const String tagIdColumn = 'tag_id_column';
@@ -265,7 +265,7 @@ class RecipeRepository{
         recipesMap[recipeId]!.ingredients.add(recipeIngredient);
       }
 
-      return RepoSuccess(recipesMap.values.toList());
+      return ResultSuccess(recipesMap.values.toList());
     } catch (e, s) {
       log(
         'Unexpected error when fetching all recipes.',
@@ -274,12 +274,12 @@ class RecipeRepository{
         stackTrace: s,
         level: 1200,
       );
-      return RepoError('Unexpected error when fetching all recipes: $e');
+      return ResultError('Unexpected error when fetching all recipes: $e');
     }
   }
 
   // TODO ingredients and tags
-  Future<RepoResult<Recipe?>> getRecipe(int id) async {
+  Future<Result<Recipe?>> getRecipe(int id) async {
     try {
       final List<Map<String, Object?>> recipesMap = await _db.query(
         RecipeSchema.table,
@@ -288,9 +288,9 @@ class RecipeRepository{
       );
 
       if (recipesMap.isEmpty) {
-        return RepoFailure('No recipe with id $id');
+        return ResultFailure('No recipe with id $id');
       }
-      return RepoSuccess(_recipeFromMap(recipesMap.first));
+      return ResultSuccess(_recipeFromMap(recipesMap.first));
     } catch (e, s) {
       log(
         'Unexpected error when fetching recipe with id $id.',
@@ -299,7 +299,7 @@ class RecipeRepository{
         stackTrace: s,
         level: 1200,
       );
-      return RepoError('Unexpected error when fetching recipe with id $id: $e');
+      return ResultError('Unexpected error when fetching recipe with id $id: $e');
     }
   }
 }

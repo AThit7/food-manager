@@ -1,6 +1,6 @@
 import 'package:uuid/uuid.dart';
 
-import 'product/local_product.dart';
+import 'local_product.dart';
 
 class PantryItem {
   final String uuid;

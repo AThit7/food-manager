@@ -4,9 +4,9 @@ import 'package:food_manager/data/database/schema/tag_schema.dart';
 import 'package:food_manager/data/database/schema/unit_schema.dart';
 import 'package:food_manager/domain/models/tag.dart';
 
-import '../../core/result/repo_result.dart';
+import '../../core/result/result.dart';
 import '../../domain/models/pantry_item.dart';
-import '../../domain/models/product/local_product.dart';
+import '../../domain/models/local_product.dart';
 import '../../domain/validators/pantry_item_validator.dart';
 import '../../data/services/database/database_service.dart';
 import '../../data/database/schema/pantry_item_schema.dart';
@@ -45,7 +45,7 @@ class PantryItemRepository{
     );
   }
 
-  Future<RepoResult<int>> insertItem(PantryItem item) async {
+  Future<Result<int>> insertItem(PantryItem item) async {
     if (!PantryItemValidator.isValid(item)) {
       throw ArgumentError('Pantry item has invalid fields.');
     }
@@ -60,10 +60,10 @@ class PantryItemRepository{
       final results = await batch.commit();
 
       if (results.isEmpty || results[0] is! int) {
-        return RepoError('Insert did not return expected ID.');
+        return ResultError('Insert did not return expected ID.');
       }
 
-      return RepoSuccess(results[0] as int);
+      return ResultSuccess(results[0] as int);
     } catch (e, s) {
       log(
         'Unexpected error when inserting pantry item.',
@@ -72,11 +72,11 @@ class PantryItemRepository{
         stackTrace: s,
         level: 1200,
       );
-      return RepoError('Unexpected error when inserting pantry item.', e);
+      return ResultError('Unexpected error when inserting pantry item.', e);
     }
   }
 
-  Future<RepoResult<int>> updateItem(PantryItem item) async {
+  Future<Result<int>> updateItem(PantryItem item) async {
     if (item.id == null) {
       throw ArgumentError('Product must have an ID when updating.');
     }
@@ -97,9 +97,9 @@ class PantryItemRepository{
       final results = await batch.commit();
 
       if (results.isEmpty || results[0] is! int) {
-        return RepoError('Insert did not return expected ID.');
+        return ResultError('Insert did not return expected ID.');
       }
-      return RepoSuccess(results[0] as int);
+      return ResultSuccess(results[0] as int);
     } catch (e, s) {
       log(
         'Unexpected error when updating pantry item.',
@@ -108,11 +108,11 @@ class PantryItemRepository{
         stackTrace: s,
         level: 1200,
       );
-      return RepoError('Unexpected error when updating pantry item.', e);
+      return ResultError('Unexpected error when updating pantry item.', e);
     }
   }
 
-  Future<RepoResult<List<PantryItem>>> listPantryItems() async {
+  Future<Result<List<PantryItem>>> listPantryItems() async {
     try {
       const String itemId = "item_id";
       const String productId = "product_id";
@@ -189,7 +189,7 @@ class PantryItemRepository{
         item.product.units[row[unitName] as String] = row[UnitSchema.multiplier] as double;
       }
 
-      return RepoSuccess(items.values.toList());
+      return ResultSuccess(items.values.toList());
     } catch (e, s) {
       log(
         'Unexpected error when listing pantry items.',
@@ -198,12 +198,12 @@ class PantryItemRepository{
         stackTrace: s,
         level: 1200,
       );
-      return RepoError('Unexpected error when listing pantry items.', e);
+      return ResultError('Unexpected error when listing pantry items.', e);
     }
   }
 
   // TODO fetch units too
-  Future<RepoResult<PantryItem>> getPantryItem(int id) async {
+  Future<Result<PantryItem>> getPantryItem(int id) async {
     try {
       const String itemId = "item_id";
       const String productId = "product_id";
@@ -241,7 +241,7 @@ class PantryItemRepository{
 
       final row = rows.firstOrNull;
       if (row == null) {
-        return RepoFailure('No product with id $id.');
+        return ResultFailure('No product with id $id.');
       }
 
       final product = LocalProduct(
@@ -261,7 +261,7 @@ class PantryItemRepository{
         units: {},
       );
 
-      return RepoSuccess(pantryItemFromMap(rows.firstOrNull!, product));
+      return ResultSuccess(pantryItemFromMap(rows.firstOrNull!, product));
     } catch (e, s) {
       log(
         'Unexpected error when fetching pantry item with id $id.',
@@ -270,11 +270,11 @@ class PantryItemRepository{
         stackTrace: s,
         level: 1200,
       );
-      return RepoError('Unexpected error when fetching pantry item.', e);
+      return ResultError('Unexpected error when fetching pantry item.', e);
     }
   }
 
-  Future<RepoResult<void>> removeItem(PantryItem item) async {
+  Future<Result<void>> removeItem(PantryItem item) async {
     if (item.id == null) {
       throw ArgumentError("item.id can't be null");
     }
@@ -282,8 +282,8 @@ class PantryItemRepository{
     try {
       final count = await _db.delete(PantryItemSchema.table, where: "${PantryItemSchema.id} = ?", whereArgs: [item.id!]);
 
-      if (count == 1) return RepoSuccess(null);
-      if (count == 0) return RepoFailure("No item witch matching id.");
+      if (count == 1) return ResultSuccess(null);
+      if (count == 0) return ResultFailure("No item witch matching id.");
       throw StateError("More than one item deleted.");
     } catch (e, s) {
       log(
@@ -293,11 +293,11 @@ class PantryItemRepository{
         stackTrace: s,
         level: 1200,
       );
-      return RepoError('Unexpected error when fetching pantry item.', e);
+      return ResultError('Unexpected error when fetching pantry item.', e);
     }
   }
 
-  Future<RepoResult<void>> buyItems(Iterable<PantryItem> items) async {
+  Future<Result<void>> buyItems(Iterable<PantryItem> items) async {
     if (items.isEmpty) {
       throw ArgumentError("The item list can't be empty.");
     }
@@ -313,7 +313,7 @@ class PantryItemRepository{
     }
 
     try {
-      return await _db.transaction<RepoResult<void>>((txn) async {
+      return await _db.transaction<Result<void>>((txn) async {
         final placeholders = List.filled(uuids.length, '?').join(',');
         final sql = '''
         UPDATE ${PantryItemSchema.table}
@@ -324,10 +324,10 @@ class PantryItemRepository{
         final count = await txn.rawUpdate(sql, uuids.toList(growable: false));
 
         if (count != uuids.length) {
-          return RepoFailure('Updated $count of ${uuids.length} items.'
+          return ResultFailure('Updated $count of ${uuids.length} items.'
               'Some UUIDs may not exist or were already bought.');
         }
-        return RepoSuccess(null);
+        return ResultSuccess(null);
       });
     } catch (e, s) {
       log(
@@ -337,7 +337,7 @@ class PantryItemRepository{
         stackTrace: s,
         level: 1200,
       );
-      return RepoError('Unexpected error when buying pantry items.', e);
+      return ResultError('Unexpected error when buying pantry items.', e);
     }
   }
 }

@@ -7,7 +7,7 @@ import 'package:food_manager/data/database/schema/unit_schema.dart';
 import 'package:food_manager/domain/models/tag.dart';
 import 'package:food_manager/domain/validators/tag_validator.dart';
 
-import '../../core/result/repo_result.dart';
+import '../../core/result/result.dart';
 import '../../data/services/database/database_service.dart';
 
 sealed class TagEvent {}
@@ -54,12 +54,12 @@ class TagRepository{
   }
 
 
-  Future<RepoResult<List<Tag>>> listTags() async {
+  Future<Result<List<Tag>>> listTags() async {
     try {
       final rows = await _db.query(TagSchema.table);
       final results = rows.map((row) => _tagFromMap(row)).toList();
 
-      return RepoSuccess(results);
+      return ResultSuccess(results);
     } catch (e, s) {
       log(
         'Unexpected error when fetching all tags.',
@@ -68,11 +68,11 @@ class TagRepository{
         stackTrace: s,
         level: 1200,
       );
-      return RepoError('Unexpected error when fetching all tag: $e');
+      return ResultError('Unexpected error when fetching all tag: $e');
     }
   }
 
-  Future<RepoResult<Iterable<({Tag tag, List<String> units})>>> getTagUnitsMap() async {
+  Future<Result<Iterable<({Tag tag, List<String> units})>>> getTagUnitsMap() async {
     const String unitNameColumn = 'unit_name_column';
     const String unitTable = 'unit_table';
     const String productTable = 'product_table';
@@ -100,7 +100,7 @@ class TagRepository{
         if (unit != null) tagUnitsMap[tag.name]!.units.add(unit);
       }
 
-      return RepoSuccess(tagUnitsMap.values);
+      return ResultSuccess(tagUnitsMap.values);
     } catch (e, s) {
       log(
         'Unexpected error when fetching tag-units map.',
@@ -109,18 +109,18 @@ class TagRepository{
         stackTrace: s,
         level: 1200,
       );
-      return RepoError('Unexpected error when fetching all tag: $e');
+      return ResultError('Unexpected error when fetching all tag: $e');
     }
   }
 
-  Future<RepoResult<Tag>> getOrCreateTagByName(String name) async {
+  Future<Result<Tag>> getOrCreateTagByName(String name) async {
     if (!TagValidator.isValid(Tag(name: name))) {
       throw ArgumentError('Tag name is invalid.');
     }
 
     try {
       final id = await _db.transaction((txn) => getOrCreateTagByNameTxn(name, txn));
-      return RepoSuccess(Tag(id: id, name: name));
+      return ResultSuccess(Tag(id: id, name: name));
     } catch (e, s) {
       log(
         'Unexpected error when getting/inserting a tag.',
@@ -129,7 +129,7 @@ class TagRepository{
         stackTrace: s,
         level: 1200,
       );
-      return RepoError('Unexpected error when getting/inserting a tag: $e');
+      return ResultError('Unexpected error when getting/inserting a tag: $e');
     }
   }
 

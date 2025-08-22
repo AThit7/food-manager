@@ -1,6 +1,6 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:food_manager/core/result/repo_result.dart';
+import 'package:food_manager/core/result/result.dart';
 import 'package:food_manager/data/repositories/pantry_item_repository.dart';
 import 'package:food_manager/domain/models/pantry_item.dart';
 
@@ -22,10 +22,10 @@ class PantryViewmodel extends ChangeNotifier {
     _items = [];
 
     switch (result) {
-      case RepoSuccess(): _items = result.data.where((e) => e.isBought)
+      case ResultSuccess(): _items = result.data.where((e) => e.isBought)
           .sorted((a, b) => a.product.name.compareTo(b.product.name));
-      case RepoError(): errorMessage = result.message;
-      case RepoFailure():
+      case ResultError(): errorMessage = result.message;
+      case ResultFailure():
         throw StateError('Unexpected RepoFailure in loadPantryItems');
     }
 
@@ -39,9 +39,9 @@ class PantryViewmodel extends ChangeNotifier {
 
     notifyListeners();
     switch (result) {
-      case RepoSuccess(): return 'Item deleted';
-      case RepoFailure(): return 'Item already deleted';
-      case RepoError(): return 'Something went wrong';
+      case ResultSuccess(): return 'Item deleted';
+      case ResultFailure(): return 'Item already deleted';
+      case ResultError(): return 'Something went wrong';
     }
   }
 }
