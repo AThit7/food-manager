@@ -11,7 +11,7 @@ class ShoppingListGenerator {
     final result = <ShoppingListEntry>[];
 
     for (final (i, day) in plan.plan.indexed) {
-      log('Generating for day; $i');
+      //log('Generating for day; $i');
       for (final slot in day) {
         for (final comp in slot.ingredients.values.expand((list) => list)) {
           final item = comp.item;

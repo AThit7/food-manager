@@ -4,7 +4,7 @@ import 'package:food_manager/data/repositories/recipe_repository.dart';
 import 'package:food_manager/data/repositories/tag_repository.dart';
 import 'package:food_manager/data/services/database/database_service.dart';
 import 'package:food_manager/application/config/meal_planner_config.dart';
-import 'package:food_manager/application/meal_planner.dart';
+import 'package:food_manager/application/meal_planner_new2.dart';
 import 'package:food_manager/application/shopping_list_generator.dart';
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';

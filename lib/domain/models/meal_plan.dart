@@ -20,8 +20,8 @@ class MealPlan {
     required this.waste,
     required this.valid,
   }) {
-    if (plan.length != waste.length || valid.length != plan.length) {
-      throw ArgumentError("waste, valid and plan must have the same lengths.");
+    if (plan.length > waste.length || valid.length != plan.length) {
+      throw ArgumentError("Bad list lengths");
     }
 
     log("Created new plan starting at ${dayZero.toString()}");

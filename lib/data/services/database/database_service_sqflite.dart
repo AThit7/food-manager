@@ -6,7 +6,7 @@ import 'package:food_manager/data/database/schema/pantry_item_schema.dart';
 import 'package:food_manager/data/database/schema/recipe_ingredient_schema.dart';
 import 'package:food_manager/data/database/schema/recipe_schema.dart';
 import 'package:food_manager/data/database/schema/tag_schema.dart';
-//import 'package:food_manager/utils/seed_products.dart';
+// import 'package:food_manager/utils/seed_products.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
@@ -27,11 +27,11 @@ class DatabaseServiceSqflite implements DatabaseService {
 
   @override
   Future<void> init() async {
-    _unsafePath = join(await getDatabasesPath(), 'user_data.db');
-    //await deleteDatabase(dbPath); // TODO: remove later
+    final path = _unsafePath = join(await getDatabasesPath(), 'user_data.db');
+    // await deleteDatabase(path); // TODO: remove later
 
     _unsafeDb = await openDatabase(
-      _dbPath,
+      path,
       onConfigure: (db) async {
         await db.execute("PRAGMA foreign_keys = ON");
       },

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:developer';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:food_manager/core/exceptions/exceptions.dart';
 import 'package:food_manager/core/result/result.dart';
@@ -154,9 +155,18 @@ class RecipeFormViewmodel extends ChangeNotifier {
         throw StateError('Unexpected RepoFailure in loadTagsAndUnits');
     }
 
-    _tagsFuse = Fuzzy(_tagUnitsMap.keys.toList());
-    _unitFuseMap =
-        Map<String, Fuzzy<String>>.fromEntries(_tagUnitsMap.entries.map((e) => MapEntry(e.key, Fuzzy(e.value.units))));
+    final tagOpts = FuzzyOptions<String>(
+        distance: 10000,
+        minMatchCharLength: 3
+    );
+    final unitOpts = FuzzyOptions<String>(
+      distance: 10000,
+    );
+
+    _tagsFuse = Fuzzy(_tagUnitsMap.keys.toList(), options: tagOpts);
+    _unitFuseMap = Map<String, Fuzzy<String>>
+        .fromEntries(_tagUnitsMap.entries
+        .map((e) => MapEntry(e.key, Fuzzy(e.value.units, options: unitOpts))));
 
     _isLoadingTags = false;
     notifyListeners();
@@ -181,7 +191,10 @@ class RecipeFormViewmodel extends ChangeNotifier {
       '⅞': '7/8',
     };
     normalizedFractions.forEach((k, v) => line = line.replaceAll(k, v));
-    return line.toLowerCase().replaceAll(RegExp(r'\s+'), ' ').trim();
+    return line.toLowerCase()
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
   }
 
   double? _parseAmount(String amountString) {
@@ -213,51 +226,54 @@ class RecipeFormViewmodel extends ChangeNotifier {
   }
 
   IngredientData _parseLine(String line) {
-    final regex = RegExp(r'^(\d+/\d+|\d+(?:[.,]\d+)?(?:\s+\d+/\s*\d+)?)\s*(.*)$');
+    final regex = RegExp(r'^(.*?)\s*(\d+/\d+|\d+(?:[.,]\d+)?(?:\s+\d+/\s*\d+)?)\s*(.*)$');
     final match = regex.firstMatch(line);
 
     if (match == null) return IngredientData();
 
-    final amountString = match.group(1)!;
-    final rest = match.group(2)!.trim();
+    final amountString = match.group(2)!;
+    final rest = '${match.group(1)} ${match.group(3)}'.replaceAll(RegExp(r'[^a-zA-Z\s]'), ' ').trim();
 
     final amount = _parseAmount(amountString);
     final parsedAmountString = amount?.toStringAsFixed(2).replaceAll(RegExp(r'\.?0+$'), '');
 
-    // TODO: adjust weight(s)?
-    final unitWeight = 0.6;
-    final tagWeight = 1.0;
-    final unitThreshold = 0.2;
-    final tagThreshold = 0.3;
-    final noUnitPenalty = 0.7;
+    final words = rest.split(' ')..removeWhere((e) => e.trim() == '');
 
-    final matchedTag = _tagsFuse.search(rest, 1).where((e) => e.score < tagThreshold).firstOrNull;
-    final matchedUnit = _unitFuseMap[matchedTag?.item]?.search(rest, 1)
-        .where((e) => e.score < unitThreshold).firstOrNull;
-    String? bestUnit = matchedUnit?.item;
-    String? bestTag = matchedTag?.item;
-    double bestScore = (matchedUnit?.score ?? noUnitPenalty) * unitWeight
-        + (matchedTag?.score ?? double.infinity) * tagWeight;
-
-    final words = rest.split(' ');
-    for (int i = 1; i < words.length; i++) {
-      final tagCandidate = words.sublist(i).join(' ');
-      final unitCandidate = words.sublist(0, i).join(' ');
-      final matchedTags = _tagsFuse.search(tagCandidate, 5);
-
-      for (final matchedTag in matchedTags.where((e) => e.score < tagThreshold)) {
-        final unitsFuse = _unitFuseMap[matchedTag.item];
-        final matchedUnit = unitsFuse?.search(unitCandidate, 1).where((e) => e.score < unitThreshold).firstOrNull;
-        final score = (matchedUnit?.score ?? noUnitPenalty) * unitWeight + matchedTag.score * tagWeight;
-
-        if (score < bestScore) {
-          bestTag = matchedTag.item;
-          bestUnit = matchedUnit?.item;
-          bestScore = score;
+    final bestTags = <String, double>{};
+    for (final candidate in words.where((e) => e.length > 2)) {
+      final hits = _tagsFuse.search(candidate);
+      for (final hit in hits) {
+        if (hit.score < 0.3) {
+          bestTags[hit.item] = (bestTags[hit.item] ?? 0) + 1;
         }
       }
     }
 
+    final bestTag = bestTags.isEmpty
+        ? null
+        : bestTags.entries.reduce((v, e) => v.value < e.value ? e : v).key;
+    if (bestTag == null) return IngredientData(amount: parsedAmountString, tag: bestTag);
+
+    final unitsFuse = _unitFuseMap[bestTag]!;
+    final units = getUnits(bestTag).toSet();
+    final bestUnits = <String, double>{};
+    String? bestUnit;
+    for (final candidate in words) {
+      if (units.contains(candidate)) {
+        bestUnit = candidate;
+        break;
+      }
+      final hits = unitsFuse.search(candidate);
+      for (final hit in hits) {
+        if (hit.score < 0.3) {
+          bestUnits[hit.item] = (bestUnits[hit.item] ?? 0) + 1;
+        }
+      }
+    }
+
+    bestUnit ??= bestUnits.isEmpty
+        ? null
+        : bestUnits.entries.reduce((v, e) => v.value < e.value ? e : v).key;
     return IngredientData(amount: parsedAmountString, tag: bestTag, unit: bestUnit);
   }
 

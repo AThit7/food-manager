@@ -4,6 +4,11 @@ import 'package:food_manager/domain/models/pantry_item.dart';
 import 'package:food_manager/ui/meal_plan/view_models/planner_viewmodel.dart';
 import 'package:food_manager/ui/meal_plan/widgets/planner_preferences_sheet.dart';
 
+String _fmt(double v) {
+  final i = v.truncateToDouble();
+  return (v == i) ? i.toStringAsFixed(0) : v.toStringAsFixed(2);
+}
+
 class DaySummaryCard extends StatelessWidget {
   const DaySummaryCard({
     super.key,
@@ -138,7 +143,7 @@ class _RecipeCardState extends State<RecipeCard> {
                 children: [
                   for (final ingredient in widget.slot.recipe.ingredients) ...[
                     Text(
-                      "${ingredient.tag.name} (${ingredient.amount} ${ingredient.unit})",
+                      "${ingredient.tag.name} (${_fmt(ingredient.amount)} ${ingredient.unit})",
                       style: Theme.of(context).textTheme.labelLarge!.copyWith(fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 4),
@@ -193,7 +198,7 @@ class _IngredientLine extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text('$quantity${item.product.referenceUnit}'),
+                Text('${_fmt(quantity)}${item.product.referenceUnit}'),
                 const SizedBox(width: 8),
                 Icon(Icons.schedule, size: 14),
                 const SizedBox(width: 4),

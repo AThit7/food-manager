@@ -12,7 +12,7 @@ import 'package:food_manager/application/models/meal_plan_constraints.dart';
 import 'package:food_manager/domain/models/pantry_item.dart';
 import 'package:food_manager/domain/models/local_product.dart';
 import 'package:food_manager/domain/models/recipe.dart';
-import 'package:food_manager/application/meal_planner.dart';
+import 'package:food_manager/application/meal_planner_new2.dart';
 
 class PlannerViewmodel extends ChangeNotifier {
   PlannerViewmodel({
@@ -160,11 +160,12 @@ class PlannerViewmodel extends ChangeNotifier {
       return;
     }
 
-    mealPlan = _mealPlanner.generatePlan(
+    final planResult = _mealPlanner.generatePlan(
       products: products,
       pantryItems: pantryItems,
       recipes: recipes,
       constraints: MealPlanConstraints(
+        mealRange: (lower: _preferences.lowerMealCount ?? 3, upper: _preferences.upperMealCount ?? 5),
         calorieRange: (lower: _preferences.lowerCalories ?? 1500, upper: _preferences.upperCalories ?? 5000),
         proteinRange: (lower: _preferences.lowerProtein ?? 0, upper: _preferences.upperProtein ?? 1000),
         carbsRange: (lower: _preferences.lowerCarbs ?? 0, upper: _preferences.upperCarbs ?? 1000),
@@ -178,7 +179,13 @@ class PlannerViewmodel extends ChangeNotifier {
         valid: []
       ),
     );
-    
+
+    switch (planResult) {
+      case ResultSuccess(): mealPlan = planResult.data;
+      case ResultFailure(): errorMessage = 'Failed to generate meal plan. Try adjusting requirements.';
+      case ResultError(): errorMessage = 'An error occurred while generating the plan';
+    }
+
     await _saveMealPlan();
 
     isLoading = false;
