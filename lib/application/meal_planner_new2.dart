@@ -251,8 +251,9 @@ class _MealPlanState {
     final id = recipe.id!;
     final used = recipeUses[id] ?? 0;
     if (used >= maxRecipeRepetitions) return false;
+    if (day < plan.length && plan[day].any((slot) => slot.recipe.id == id)) return false;
 
-    return consecutiveStreak(id, day - 1) < 4;
+    return consecutiveStreak(id, day - 1) < 3;
   }
 }
 
@@ -265,7 +266,7 @@ class MealPlanner {
   // TODO move to config later
   final double acceptableError = 0.05;
   final int planLength = 14;
-  final int someAttemptsLimit = 10;
+  final int someAttemptsLimit = 20;
 
   Result<MealPlan> generatePlan({
     required List<LocalProduct> products,
@@ -348,15 +349,16 @@ class MealPlanner {
       boughtItems: UnmodifiableMapView({ for (final e in pantryItems) e.uuid : e }),
       plan: [],
       uses: {},
-      maxRecipeRepetitions: max((planLength * constraints.mealRange.upper / recipes.length * 2).ceil(), 2), // TODO tweak?
+      maxRecipeRepetitions: max((planLength * constraints.mealRange.upper / recipes.length).ceil(), 2) + 1, // TODO tweak?
       recipeUses: {},
     );
 
     // find some state that satisfies constraints
     _MealPlanState? someSolution;
+    final rnd = Random();
     for(int i = 0; i < someAttemptsLimit; i++) {
       if (someSolution == null) dev.log('Getting some solution, attempt: $i', name: 'MealPlanner');
-      someSolution ??= _getSome(startingState, constraints, i);
+      someSolution ??= _getSome(startingState, constraints, rnd);
     }
     if (someSolution == null) return ResultFailure('Could not find any plan satisfying requirements');
 
@@ -375,8 +377,8 @@ class MealPlanner {
 
   // ############################## GET SOME ###########################################
 
-  _MealPlanState? _getSome(_MealPlanState state, MealPlanConstraints constraints, int seed) {
-    final rnd = Random(seed + DateTime.now().microsecond);
+  _MealPlanState? _getSome(_MealPlanState state, MealPlanConstraints constraints, Random? random) {
+    final rnd = random ?? Random();
     _MealPlanState current = state.copy();
 
     double span(num lo, num hi) => (hi - lo).abs().toDouble().clamp(1.0, double.infinity);
