@@ -73,7 +73,8 @@ class _MealPlanItem {
     );
   }
 
-  PantryItem toPantryItem(DateTime dayZero) => PantryItem(
+  PantryItem toPantryItem(DateTime dayZero) => PantryItem.withUuid(
+    uuid: uuid,
     product: product,
     quantity: product.containerSize ?? quantity,
     expirationDate: dayZero.add(Duration(days: expirationDay)),
@@ -364,6 +365,7 @@ class MealPlanner {
 
     // find locally best state (neighbourhood search)
     final betterSolution = _getBest(someSolution, constraints);
+    //_rebuildFromDay(betterSolution, 0);
     assert(_isValid(betterSolution, constraints));
 
     dev.log('Total waste in the new plan: ${betterSolution.getWaste(0)}');
@@ -611,36 +613,52 @@ class MealPlanner {
   _MealPlanState _swapRecipe(_MealPlanState state, Recipe recipe, int i, int j) {
     final newState = state.copy();
     final slot = newState.plan[i][j];
-
-    for (final item in slot.items) {
-      _removeItem(newState, item, i);
-    }
-
-    newState.plan[i][j] = _findIngredients(newState, recipe, i);
-    newState.recipeUses[slot.recipe.id!] = max(0, (newState.recipeUses[slot.recipe.id!] ?? 0) -1);
+    newState.recipeUses[slot.recipe.id!] = max(0, (newState.recipeUses[slot.recipe.id!] ?? 0) - 1);
     newState.recipeUses[recipe.id!] = (newState.recipeUses[recipe.id!] ?? 0) + 1;
+
+    newState.plan[i][j] = _MealPlanSlot(recipe: recipe, calories: 0, protein: 0, carbs: 0, fat: 0, items: const []);
+
+    _rebuildFromDay(newState, i);
     return newState;
   }
 
   _MealPlanState _swapMeals(_MealPlanState state, int i, int j, int k, int l) {
     final newState = state.copy();
-    final slotA = newState.plan[i][j];
-    final slotB = newState.plan[k][l];
+    final recA = newState.plan[i][j].recipe;
+    final recB = newState.plan[k][l].recipe;
 
-    for (final item in slotA.items) {
-      _removeItem(newState, item, i);
-    }
-    for (final item in slotB.items) {
-      _removeItem(newState, item, k);
-    }
+    newState.plan[i][j] = _MealPlanSlot(
+        recipe: recB, calories: 0, protein: 0, carbs: 0, fat: 0, items: const []);
+    newState.plan[k][l] = _MealPlanSlot(
+        recipe: recA, calories: 0, protein: 0, carbs: 0, fat: 0, items: const []);
 
-    newState.plan[i][j] = _findIngredients(newState, slotB.recipe, i);
-    newState.plan[k][l] = _findIngredients(newState, slotA.recipe, k);
-
+    _rebuildFromDay(newState, min(i, k));
     return newState;
   }
 
   // ############################## AUXILIARY FUNCTIONS ###########################################
+
+  void _rebuildFromDay(_MealPlanState state, int firstDay) {
+    final length = state.plan.length;
+    for (int i = firstDay; i < length; i++) {
+      for (final slot in state.plan[i]) {
+        for (final it in slot.items) {
+          _removeItem(state, it, i);
+        }
+      }
+      
+      state.plan[i] = [for (final s in state.plan[i]) _MealPlanSlot(
+        recipe: s.recipe, calories: 0, protein: 0, carbs: 0, fat: 0, items: const [],
+      )];
+    }
+
+    for (int i = firstDay; i < length; i++) {
+      for (int j = 0; j < state.plan[i].length ; j++) {
+        final recipe = state.plan[i][j].recipe;
+        state.plan[i][j] = _findIngredients(state, recipe, i);
+      }
+    }
+  }
 
   _MealPlanSlot _findIngredients(_MealPlanState state, Recipe recipe, int i) {
     final items = <_MealPlanItem>[];
@@ -726,7 +744,6 @@ class MealPlanner {
     // buy ingredients in containers, greedy with improvements
     double bestOverflow = double.infinity;
     final bestComp = ListQueue<LocalProduct>();
-    bestComp.add(matchingProducts.first); // add any product
     double remaining = target - totalWeight;
 
     for (final product in matchingProducts.reversed.where((e) => e.containerSize != null)) {
@@ -737,7 +754,7 @@ class MealPlanner {
 
       if(overflow < bestOverflow) {
         bestOverflow = overflow;
-        bestComp.removeLast();
+        if (bestComp.isNotEmpty) bestComp.removeLast();
         remaining -= size * (minPcs - 1);
         bestComp.addAll(Iterable.generate(minPcs, (_) => product));
       }
@@ -765,65 +782,60 @@ class MealPlanner {
       totalWeight += qty / product.units[unit]!;
       if (qty != product.containerSize!) {
         state.pantry[tag]![uuid] = newItem.copyWith(quantity: product.containerSize! - qty); // add leftovers to pantry
+        break;
       }
     }
 
     return result;
   }
 
-  void _removeItem(_MealPlanState state, _MealPlanItem item, int i) {
-    final pantry = state.pantry;
-    final product = item.product;
+  void _removeItem(_MealPlanState state, _MealPlanItem item, int day) {
+    final tag  = item.product.tag.name;
     final uuid = item.uuid;
-    final tag = product.tag.name;
-    final stillUsed = (product.containerSize != null && (product.containerSize! - item.quantity).abs() > _epsilon);
-    final uses = state.uses[uuid]!;
-    final original = state.boughtItems[uuid];
+    final containerSize   = item.product.containerSize;
 
-    // adjust uses
-    final idx = uses.binarySearch((day: i, quantity: 0), (a, b) => a.day.compareTo(b.day));
-    if (idx >= 0) {
-      final qtyRemainingINUse = uses[idx].quantity - item.quantity;
-      if (qtyRemainingINUse.abs() < _epsilon) {                                                 // remove use on day
-        uses.removeAt(idx);
-        if (uses.isEmpty) state.uses.remove(uuid);
-      } else {                                                                                  // adjust use on day
-        assert(qtyRemainingINUse > 0);
-        uses[idx] = (day: i, quantity: qtyRemainingINUse);
+    // undo uses
+    final uses = state.uses[uuid];
+    if (uses != null) {
+      final idx = uses.binarySearch((day: day, quantity: 0), (a,b) => a.day.compareTo(b.day));
+      if (idx >= 0) {
+        final qtyLeft = uses[idx].quantity - item.quantity;
+        if (qtyLeft.abs() < _epsilon) {
+          uses.removeAt(idx);
+          if (uses.isEmpty) state.uses.remove(uuid);
+        } else {
+          uses[idx] = (day: day, quantity: qtyLeft);
+        }
       }
     }
 
-    final pantryEntry = pantry[tag]![uuid];
+    // return to pantry
+    state.pantry.putIfAbsent(tag, () => <String,_MealPlanItem>{});
+    final bucket = state.pantry[tag]!;
+    final entry  = bucket[uuid] ?? item.copyWith();
+    entry.quantity += item.quantity;
 
-    if (pantryEntry != null) {                                                                  // modify in pantry
-      pantryEntry.quantity += item.quantity;
-      final isFull = _isFull(pantryEntry);
-
-      if (isFull && pantryEntry.isBought) {                                                     // close if bought
-        pantryEntry.isOpen = false;
-        pantryEntry.expirationDay = original!.expirationDate.difference(state.dayZero).inDays;  // restore exp date
-      } else if (isFull) {                                                                      // remove
-        pantry[tag]!.remove(pantryEntry.uuid);
+    // if full, close or retract simulated buying
+    if (containerSize != null && (containerSize - entry.quantity).abs() < _epsilon) {
+      final original = state.boughtItems[uuid];
+      if (original != null) {
+        entry.isOpen = false;
+        entry.expirationDay = original.expirationDate.difference(state.dayZero).inDays;
+      } else {
+        bucket.remove(uuid);
       }
-    } else if (stillUsed || item.isBought) {                                                    // return to the pantry
-      pantry[product.tag.name]![item.uuid] = item;
-    }                                                                                           // else: ignore
+    } else if (containerSize != null && !entry.isBought) {
+      bucket.remove(uuid);
+    }
   }
 
   Comparator<_MealPlanItem> _compareItems(int i) => (_MealPlanItem a, _MealPlanItem b) {
     final aScore = a.isOpen ? a.expirationDay : min(i + a.effectiveShelfLife, a.expirationDay);
     final bScore = b.isOpen ? b.expirationDay : min(i + b.effectiveShelfLife, b.expirationDay);
-    return aScore.compareTo(bScore);
+    final res = aScore.compareTo(bScore);
+    if (res == 0) return a.quantity.compareTo(b.quantity);
+    return res;
   };
-
-  bool _isFull(_MealPlanItem item) {
-    final containerSize = item.product.containerSize;
-    final hasContainer = containerSize != null;
-    final left = item.quantity;
-    return hasContainer
-        ? (containerSize - left).abs() < _epsilon
-        : true;
-  }
 
   bool _isNear(double value, double target, [double error = 0.05]) =>
       target == 0 ? value.abs() < _epsilon : (target - value).abs() / target < error;

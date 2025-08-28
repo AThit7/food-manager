@@ -220,7 +220,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                                     v == true ? _selected.add(id) : _selected.remove(id);
                                   }),
                                   title: Text(e.name),
-                                  secondary: Text(e.quantity.toString()),
+                                  secondary: Text('${e.quantity.toString()} ${e.unit}'),
                                   controlAffinity: ListTileControlAffinity.leading,
                                 );
                               }),
